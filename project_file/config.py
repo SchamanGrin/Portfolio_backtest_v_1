@@ -17,6 +17,7 @@ class backconfig(object):
         if not self.apikey_path.exists():
             self._create_key_file()
 
+        #Если нет каталога /symbol создаем его
         if not Path(Path(__file__).parent / 'symbol').exists():
             Path.mkdir(Path(Path(__file__).parent / 'symbol'))
 
