@@ -32,7 +32,7 @@ class backconfig(object):
 
         """
 
-        if not self.conf_path.parents.exist():
+        if not self.conf_path.parent.exists():
             Path.mkdir(self.conf_path.parent)
 
         str_conf = """[list]
