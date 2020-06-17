@@ -1,4 +1,4 @@
-# setup.py
+# config.py
 import os
 import queue  # import Queue
 
@@ -23,7 +23,7 @@ for symbol in symbol_list:
         av_list.append(symbol)
 
 if av_list:
-    AlphaVantage(symbol_list=av_list, conf=conf).take_csv(outputsize='full')
+    AlphaVantage(symbol_list=av_list, key=conf.keys['alpha vantage']['key'], url=conf.keys['alpha vantage']['url']).take_csv(outputsize='full')
 
 
 events = queue.Queue()

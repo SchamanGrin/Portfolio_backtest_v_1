@@ -1,9 +1,14 @@
 import configparser
-import datetime
+
 from pathlib import Path
+from datetime import datetime
 
 
 class backconfig(object):
+
+    def to_date(self, x):
+        return datetime.strptime(x, '%d.%m.%Y')
+
 
     def __init__(self):
 
@@ -11,104 +16,58 @@ class backconfig(object):
 
         self.apikey_path = Path(Path(__file__) / '..' / '..' / 'keys' / 'api_data.cf').resolve()
 
+        self.conf_data = {
+            'DEFAULT': {'tickets': 'SPY', 'start_date': '01.01.2010', 'initial_capital': '1000.0', 'add_funds': '100.0'},
+            'data_type': {'list': {'tickets': str.split}, 'date': {'start_date': self.to_date},
+                          'money': {'initial_capital': float, 'add_funds': float}}
+        }
+
+        self.key_data = {
+            'DEFAULT':{'url':'https://www.alphavantage.co/query?', 'key':''},
+            'data_type':{'alpha vantage':{'url':str, 'key':str}}
+        }
+
+
         if not self.conf_path.exists():
-            self._create_config_file()
+            self._create_config_file(self.conf_data, self.conf_path)
 
         if not self.apikey_path.exists():
-            self._create_key_file()
+            self._create_config_file(self.key_data, self.apikey_path)
 
         #Если нет каталога /symbol создаем его
         if not Path(Path(__file__).parent / 'symbol').exists():
             Path.mkdir(Path(Path(__file__).parent / 'symbol'))
 
-
-        self.values = self._filling_configs()
-        self.keys = self._filling_keys()
-
-    def _create_config_file(self):
-        """
-        Функция создает конфигурационный файл / каталог, где он должен лежать, заполненный по умолчанию,
+        self.values = self._filling_config_data(self.conf_data, self.conf_path)
+        self.keys = self._filling_config_data(self.key_data, self.apikey_path)
 
 
-        """
 
-        if not self.conf_path.parent.exists():
-            Path.mkdir(self.conf_path.parent)
+    def _create_config_file(self, data, path):
 
-        str_conf = """[list]
-tickets = SPY
-[date]
-start_date = 01.01.2010
-[money]
-initial_capital =  1000
-add_funds = 100"""
-        f = Path(self.conf_path)
-        try:
-            Path(f).write_text(str_conf)
-        except FileNotFoundError:
-            print('Каталог или файл не найден')
-            exit(1)
+        if not path.parent.exists():
+            Path.mkdir(path.parent)
+        config = configparser.ConfigParser()
+        dt = data['data_type']
+        for s in dt.keys():
+            config.add_section(s)
+            for k in dt[s].keys():
+                config[s][k] = data['DEFAULT'][k]
 
-    def _filling_configs(self):
+        with open(path, 'w') as conf_file:
+            config.write(conf_file)
 
-        """
-        Функция создает справочник из конфигурационного файла, приводя к нужным типам данных, исходя из секции
-        !!!! проверить на велосипеды
-         возвращает словарь с приведенными типами данных
-        """
+    def _filling_config_data(self, data, path):
 
-        def to_date(x):
-            return datetime.datetime.strptime(x, '%d.%m.%Y')
+        config = configparser.ConfigParser()
+        config.read(path)
+        dt = data['data_type']
+        conf_data = {s: {o: dt[s][o](v) for o, v in config.items(s)} for s in config.sections()}
+        for s in conf_data.keys():
+            for o in conf_data[s].keys():
+                if not conf_data[s][o]:
+                    print(f'Заполните свойство {o} раздела [{s}] файла {path}')
+                    exit()
 
-        def to_list(x):
-            return x.split()
+        return conf_data
 
-        conf = configparser.RawConfigParser()
-        conf.read(self.conf_path)
-        configs = {s: {o: v for o, v in conf.items(s)} for s in conf.sections()}
-        func = {'list': to_list, 'date': to_date, 'money': float}
-
-        for s in configs:
-            for o in configs[s].keys():
-                if configs[s][o]:
-                    configs[s][o] = func[s](configs[s][o])
-                else:
-                    print(f'Заполните параметр {o} в файле {self.conf_path}')
-                    exit(1)
-
-        return configs
-
-    def _create_key_file(self):
-        """
-        Функция создает файл с ключами, вне каталога проекта, в файл записываю ключи и URL используемых по API источников данных
-        :return:
-        """
-        if not self.apikey_path.parent.exists():
-            Path.mkdir(self.apikey_path.parent)
-
-        str_key = """[Alpha Vantage]
-    url = "https://www.alphavantage.co/query?"
-    key ="""
-
-        f = Path(self.apikey_path)
-        try:
-            Path(f).write_text(str_key)
-        except FileNotFoundError:
-            print('Каталог или файл не найден')
-            exit(1)
-
-    def _filling_keys(self):
-        """
-        Функция формирует словарь с ключами от API
-        :return: Словарь с ключами
-        """
-        conf = configparser.RawConfigParser()
-        conf.read(self.apikey_path)
-        keys = {s: {o: v for o, v in conf.items(s)} for s in conf.sections()}
-        for s in keys:
-            for o in keys[s].keys():
-                if not keys[s][o]:
-                    print(f'Заполните параметр {o} в файле {self.apikey_path}')
-                    exit(1)
-
-        return keys

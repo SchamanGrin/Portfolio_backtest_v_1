@@ -8,15 +8,15 @@ class AlphaVantage(object):
 
     """
 
-    def __init__(self, conf, symbol_list, timeframe='TIME_SERIES_DAILY'):
+    def __init__(self, key, url, symbol_list, timeframe='TIME_SERIES_DAILY'):
 
 
         self.symbol_list = symbol_list
         self.timeframe = timeframe
 
         self.api_name = 'Alpha Vantage'
-        self.key = conf.keys[self.api_name]['key']
-        self.url = conf.keys[self.api_name]['url']
+        self.key = key
+        self.url = url
 
 
     def take_csv(self, csv_dir='symbol/', outputsize='compact'):
