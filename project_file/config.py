@@ -62,12 +62,13 @@ class backconfig(object):
         config = configparser.ConfigParser()
         config.read(path)
         dt = data['data_type']
-        conf_data = {s: {o: dt[s][o](v) for o, v in config.items(s)} for s in config.sections()}
-        for s in conf_data.keys():
-            for o in conf_data[s].keys():
-                if not conf_data[s][o]:
+
+        for s in config.sections():
+            for o, v in config.items(s):
+                if not config[s][o]:
                     print(f'Заполните свойство {o} раздела [{s}] файла {path}')
                     exit()
+        conf_data = {s: {o: dt[s][o](v) for o, v in config.items(s)} for s in config.sections()}
 
         return conf_data
 
