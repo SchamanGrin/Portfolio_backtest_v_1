@@ -30,8 +30,8 @@ events = queue.Queue()
 start_date = conf.values['date']['start_date']
 
 bars = HistoricCSVDataHandler(events, dir_path, symbol_list, start_date)
-strategy = BuyAndHoldStrategy(bars, events)
-port = NaivePortfolio_add_founds(bars, events, start_date, initial_capital=0.0, buy_quantity=10.0)
+port = NaivePortfolio_add_founds(bars, events, start_date, initial_capital=conf.values['money']['initial_capital'], buy_quantity=10.0, add_funds=conf.values['money']['add_funds'])
+strategy = BuyAndHoldStrategy(bars, events, port)
 broker = SimulatedExecutionHandler(events)
 
 while True:
@@ -50,10 +50,9 @@ while True:
         else:
             if event is not None:
                 if event.type == 'MARKET':
-                    strategy.calculate_signals(event)
                     port.update_market(event)
                     port.update_timeindex(event)
-
+                    strategy.calculate_signals(event)
                 elif event.type == 'SIGNAL':
                     port.update_signal(event)
 
@@ -68,14 +67,14 @@ while True:
 
 #Вывод результатов по портфелю
 print('Стоимость портфеля:')
-for key, value in port.current_holdings.items():
+for key, value in port.all_holdings[-1].items():
     print(f'{key}: {value}')
 
 
 print('Количество позиций:')
 for key, value in port.current_positions.items():
     
-    print("{0}: {1}".format(key, value))
+    print(f'{key}: {value}')
 
 
 
