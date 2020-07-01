@@ -37,10 +37,9 @@ class BuyAndHoldStrategy(Strategy):
     Используется в качестве механизма тестирования класса Strategy и бенчмарка для сравнения разных стратегий.
     """
 
-    def __init__(self, bars, events):
+    def __init__(self, bars, events, port):
         """
         Инициализирует стратегию buy and hold.
-
         Параметры:
         bars - Объект DataHandler, который предоставляет информацию о барах
         events - Объект очереди событий.
@@ -48,34 +47,46 @@ class BuyAndHoldStrategy(Strategy):
         self.bars = bars
         self.symbol_list = self.bars.symbol_list
         self.events = events
+        self.portfolio = port
 
         # Когда получен сигнал на покупку и удержание акции, устанавливается в True
-        self.bought = self._calculate_initial_bought()
+        #self.bought = self._calculate_bought(event)
 
-    def _calculate_initial_bought(self):
+
+    def _calculate_bought(self):
         """
-        Добавляются ключи в словарь bought и устанавливаются в False.
+        Функия возвращает словарь, разрещающий / запрещающий покупку той или иной бумаги.
+        Бумага покупается один раз в зависимости от того, хватит ли на нее денег  и покупалась ли она ранее. Если не покупалась
+        и денег хватает, то возвращает True иначе Else
+        :return: словарь с бумагами и значеним False, если не покупать и True, если покупать
         """
+
         bought = {}
+        free_cash = self.portfolio.current_holdings['cash']
         for s in self.symbol_list:
             bought[s] = False
+            bars = self.bars.get_latest_bars(s, N=1)
+            cost = bars[0][4]*self.portfolio.buy_quantity
+            if self.portfolio.current_positions[s] == 0 and free_cash > cost:
+                bought[s] = True
+                free_cash -= cost
+
         return bought
+
+
 
     def calculate_signals(self, event):
         """
-       Для "Buy and Hold" генерируем один сигнал на инструмент. Это значит, что мы только открываем длинные позиции с момента инициализации стратегии.
-
+       Для "Buy and Hold" генерируем один сигнал на инструмент. Это значит, что мы только открываем длинные позиции .
         Параметры:
         event - Объект MarketEvent.
         """
         if event.type == 'MARKET':
+            bought = self._calculate_bought()
             for s in self.symbol_list:
                 bars = self.bars.get_latest_bars(s, N=1)
                 if bars is not None and bars != []:
-                    if self.bought[s] == False:
-                    # (Symbol, Datetime, Type = LONG, SHORT or EXIT)
+                    if bought[s]:
+                        # (Symbol, Datetime, Type = LONG, SHORT or EXIT)
                         signal = SignalEvent(bars[0][0], bars[0][1], 'LONG')
                         self.events.put(signal)
-                        #self.bought[s] = True
-
-
