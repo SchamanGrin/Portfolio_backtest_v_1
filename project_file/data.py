@@ -1,13 +1,12 @@
 # data.py
 import datetime
 import os
-import os.path
-import time
-from abc import ABCMeta, abstractmethod
+from pathlib import Path
 
 import pandas as pd
-import requests
+import numpy as np
 
+from abc import ABCMeta, abstractmethod
 from event import MarketEvent
 
 
@@ -56,11 +55,9 @@ class HistoricCSVDataHandler(DataHandler):
         symbol_list - Список строк инструментов.
         """
         self.events = events
-        self.csv_dir = csv_dir
+        self.csv_dir = Path(Path.cwd() / csv_dir)
         self.symbol_list = symbol_list
-        #этот костыль надо переделать при переписывании работы с датами. Здесь мы тип date переводим в текстовую строку. Чуть дальше будет обратное преобразование.
-        #убрать, переписав всю логику работы с датами
-        self.start_date = start_date.strftime('%Y-%m-%d')
+        self.start_date = start_date
 
         self.symbol_data = {}
         self.latest_symbol_data = {}
@@ -78,25 +75,23 @@ class HistoricCSVDataHandler(DataHandler):
         for s in self.symbol_list:
             # Загрузка CSV-файла без заголовочной информации, индексированный по дате
 
-            self.symbol_data[s] = pd.io.parsers.read_csv(
-                os.path.join(self.csv_dir, '%s.csv' % s),
+            self.symbol_data[s] = pd.read_csv(
+                self.csv_dir / f'{s}.csv',
                 header=0, index_col=0,
                 names=['timestamp', 'open', 'low', 'high', 'close', 'volume']
-                # names=['timestamp', 'open', 'low', 'high', 'close', 'volume', 'oi']
-                # ???не понятно, что это за oi такое. На нем код ломается.????
             )
+            #Меняем тип индекса на numpy64.
+            #!Проверить на костыли
+            self.symbol_data[s] = self.symbol_data[s].reindex(pd.to_datetime(self.symbol_data[s].index))
 
             # если даты нет в датасете, ищем первую дату после стартовой
-            #Если дата позже первой  даты в датасете, даем исключение
-            #datetime.datetime.strptime(self.symbol_data[s].index[0], '%Y-%m-%d')
-
             if self.start_date >= self.symbol_data[s].index[0]:
                 raise Exception('Date not in dataset')
             else:
                 while self.start_date not in self.symbol_data[s].index:
                     # Если даты нет в датасете, , берем следующий день
-                    new_date = datetime.datetime.strptime(self.start_date, '%Y-%m-%d').date() + datetime.timedelta(1)
-                    self.start_date = new_date.strftime('%Y-%m-%d')
+                    new_date = self.start_date + np.timedelta64(1, 'D')
+                    self.start_date = new_date
 
 
             self.symbol_data[s] = self.symbol_data[s][:self.start_date].iloc[::-1]
@@ -120,7 +115,7 @@ class HistoricCSVDataHandler(DataHandler):
         (sybmbol, datetime, open, low, high, close, volume).
         """
         for b in self.symbol_data[symbol]:
-            yield tuple([symbol, datetime.datetime.strptime(b[0], '%Y-%m-%d'),  # %H:%M:%S'),
+            yield tuple([symbol, b[0],  # %H:%M:%S'),
                          b[1][0], b[1][1], b[1][2], b[1][3]])
             # b[1][0], b[1][1], b[1][2], b[1][3], b[1][4]])
 

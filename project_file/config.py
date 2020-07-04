@@ -1,13 +1,16 @@
 import configparser
+import numpy as np
 
 from pathlib import Path
 from datetime import datetime
 
 
+
 class backconfig(object):
 
     def to_date(self, x):
-        return datetime.strptime(x, '%d.%m.%Y')
+        #переводим текстовый формат даты из конфиг файла в формат numpy data
+        return np.datetime64(x)
 
 
     def __init__(self):
@@ -17,7 +20,7 @@ class backconfig(object):
         self.apikey_path = Path(Path(__file__) / '..' / '..' / 'keys' / 'api_data.cf').resolve()
 
         self.conf_data = {
-            'DEFAULT': {'tickets': 'SPY', 'start_date': '01.01.2010', 'initial_capital': '1000.0', 'add_funds': '100.0'},
+            'DEFAULT': {'tickets': 'SPY', 'start_date': '2010-01-01', 'initial_capital': '1000.0', 'add_funds': '100.0'},
             'data_type': {'list': {'tickets': str.split}, 'date': {'start_date': self.to_date},
                           'money': {'initial_capital': float, 'add_funds': float}}
         }
@@ -68,6 +71,7 @@ class backconfig(object):
                 if not config[s][o]:
                     print(f'Заполните свойство {o} раздела [{s}] файла {path}')
                     exit()
+        #На основании функций из словаря data_type
         conf_data = {s: {o: dt[s][o](v) for o, v in config.items(s)} for s in config.sections()}
 
         return conf_data

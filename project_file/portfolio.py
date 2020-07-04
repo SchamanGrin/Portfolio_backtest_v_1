@@ -285,7 +285,7 @@ class NaivePortfolio_add_founds(Portfolio):
         self.bars = bars
         self.events = events
         self.symbol_list = self.bars.symbol_list
-        self.start_date = start_date.strftime('%Y-%m-%d')
+        self.start_date = start_date
         self.initial_capital = initial_capital
         self.buy_quantity = buy_quantity
 
@@ -310,7 +310,7 @@ class NaivePortfolio_add_founds(Portfolio):
         """
 
         d = pd.DataFrame([dict((k,v) for k,v in [(s,0) for s in self.symbol_list])])
-        d['datetime'] = datetime.datetime.strptime(self.start_date, '%Y-%m-%d').date()
+        d['datetime'] = self.start_date
         d['total'] = - self.initial_capital
         d.set_index('datetime', inplace=True)
 
@@ -329,7 +329,7 @@ class NaivePortfolio_add_founds(Portfolio):
         Конструирует список величин текущей стоимости позиций, используя start_date для определения момента, с которой должен начинаться временной индекс.
         """
         d = dict((k, v) for k, v in [(s, 0.0) for s in self.symbol_list])
-        d['datetime'] = datetime.datetime.strptime(self.start_date, '%Y-%m-%d')
+        d['datetime'] = self.start_date
         d['cash'] = self.initial_capital
         d['commission'] = 0.0
         d['total'] = self.initial_capital
@@ -402,9 +402,13 @@ class NaivePortfolio_add_founds(Portfolio):
         """
         if event.datetime > self.last_add_date:
             self.adding_funds()
-            self.cashflow.loc[event.datetime.date(), 'total'] = -self.add_funds
-            next_month = datetime.date(self.last_add_date.year, self.last_add_date.month, 28) + datetime.timedelta(4)
-            self.last_add_date = datetime.datetime(year=next_month.year, month=next_month.month, day=1)
+            #добавляем строку в dataframe cashflow
+            self.cashflow.loc[event.datetime, 'total'] = -self.add_funds
+            #Получаем первое число следующего месяца, для переноса даты пополнения
+            #!Проверить на грабли
+            next_month = np.datetime64(self.last_add_date, 'M') + np.timedelta64(1, 'M')
+            self.last_add_date = np.datetime64(next_month, 'D')
+
 
 
     def update_positions_from_fill(self, fill):
@@ -448,7 +452,7 @@ class NaivePortfolio_add_founds(Portfolio):
 
         #Заносим денежный поток на покупку
         #print(fill.timeindex.date())
-        self.cashflow.loc[fill.timeindex.date(), fill.symbol] = -(cost + fill.commission)
+        self.cashflow.loc[fill.timeindex, fill.symbol] = -(cost + fill.commission)
 
     def update_fill(self, event):
         """
