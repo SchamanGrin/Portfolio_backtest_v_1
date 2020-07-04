@@ -1,5 +1,6 @@
 # config.py
 import os
+import time
 import queue  # import Queue
 
 from alpha import AlphaVantage
@@ -10,6 +11,7 @@ from portfolio import NaivePortfolio, NaivePortfolio_add_founds
 from strategy import BuyAndHoldStrategy
 from config import backconfig
 
+start_time = time.time()
 conf = backconfig()
 
 symbol_list = conf.values['list']['tickets']
@@ -83,3 +85,7 @@ print('Результативность порфтеля:')
 result = port.output_summary_stats()
 for ind in result:
     print(ind[0],':',ind[1])
+
+end_time = time.time()
+total_time = end_time - start_time
+print(f'Время выполнения: {total_time:.2f} сек.')
