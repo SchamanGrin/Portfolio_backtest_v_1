@@ -10,6 +10,8 @@ from portfolio import NaivePortfolio, NaivePortfolio_add_founds
 from strategy import BuyAndHoldStrategy
 from config import backconfig
 
+
+
 conf = backconfig()
 
 symbol_list = conf.values['list']['tickets']
