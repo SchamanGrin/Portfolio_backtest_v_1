@@ -1,8 +1,8 @@
 import configparser
-import numpy as np
+import pandas as pd
 
 from pathlib import Path
-from datetime import datetime
+
 
 
 
@@ -10,7 +10,8 @@ class backconfig(object):
 
     def to_date(self, x):
         #переводим текстовый формат даты из конфиг файла в формат numpy data
-        return np.datetime64(x)
+
+        return pd.to_datetime(x)
 
 
     def __init__(self):
