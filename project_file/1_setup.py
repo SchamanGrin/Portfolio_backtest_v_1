@@ -10,6 +10,7 @@ from portfolio import NaivePortfolio, NaivePortfolio_add_founds
 from strategy import BuyAndHoldStrategy
 from config import backconfig
 
+#test_coomit1
 
 conf = backconfig()
 
