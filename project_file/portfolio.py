@@ -401,9 +401,9 @@ class NaivePortfolio_add_founds(Portfolio):
             else:
                 full_cost = 0.0
 
-        self.current_holdings['commission']+=full_cost
-        self.current_holdings['cash'] -= full_cost
-        self.current_holdings['total'] -= full_cost
+            self.current_holdings['commission']+=full_cost
+            self.current_holdings['cash'] -= full_cost
+            self.current_holdings['total'] -= full_cost
 
         """
         Пополняем портфель, в нужные даты
