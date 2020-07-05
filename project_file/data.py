@@ -78,11 +78,8 @@ class HistoricCSVDataHandler(DataHandler):
             self.symbol_data[s] = pd.read_csv(
                 self.csv_dir / f'{s}.csv',
                 header=0, index_col=0,
-                names=['timestamp', 'open', 'low', 'high', 'close', 'volume']
+                names=['timestamp', 'open', 'low', 'high', 'close', 'volume'], parse_dates=['timestamp']
             )
-            #Меняем тип индекса на numpy64.
-            #!Проверить на костыли
-            self.symbol_data[s] = self.symbol_data[s].reindex(pd.to_datetime(self.symbol_data[s].index))
 
             # если даты нет в датасете, ищем первую дату после стартовой
             if self.start_date >= self.symbol_data[s].index[0]:
@@ -115,7 +112,7 @@ class HistoricCSVDataHandler(DataHandler):
         (sybmbol, datetime, open, low, high, close, volume).
         """
         for b in self.symbol_data[symbol]:
-            yield tuple([symbol, b[0],  # %H:%M:%S'),
+            yield tuple([symbol, b[0],
                          b[1][0], b[1][1], b[1][2], b[1][3]])
             # b[1][0], b[1][1], b[1][2], b[1][3], b[1][4]])
 
