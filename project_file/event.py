@@ -17,17 +17,7 @@ class MarketEvent(Event):
         """
         self.type = 'MARKET'
         self.datetime = datetime
-        self.commission = self.regular_ib_commission()
 
-
-    def regular_ib_commission(self):
-        if self.type == 'MARKET':
-            last_day = self.datetime - timedelta(1)
-            if self.datetime.month != last_day.month:
-                full_cost = 15.0
-            else:
-                full_cost = 0.0
-        return full_cost
 
 
 

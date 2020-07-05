@@ -290,9 +290,9 @@ class NaivePortfolio_add_founds(Portfolio):
         self.buy_quantity = buy_quantity
 
         self.add_funds = add_funds
-        #self.last_add_date = datetime.datetime.strptime(start_date, '%Y-%m-%d')
+
         self.last_add_date = start_date
-        #self.last_buy = datetime.datetime.strptime(start_date, '%Y-%m-%d')
+
         self.last_buy = start_date
 
         self.cashflow = self.construct_cashflow()
@@ -393,9 +393,17 @@ class NaivePortfolio_add_founds(Portfolio):
          Добавляем комисси за рыночные данные и бездействие
         """
 
-        self.current_holdings['commission']+=event.commission
-        self.current_holdings['cash'] -= event.commission
-        self.current_holdings['total'] -= event.commission
+        if event.type == 'MARKET':
+
+
+            if self.all_holdings[-1]['datetime'].month != event.datetime.month:
+                full_cost = 15.0
+            else:
+                full_cost = 0.0
+
+        self.current_holdings['commission']+=full_cost
+        self.current_holdings['cash'] -= full_cost
+        self.current_holdings['total'] -= full_cost
 
         """
         Пополняем портфель, в нужные даты
