@@ -113,8 +113,12 @@ class HistoricCSVDataHandler(DataHandler):
         """
         for b in self.symbol_data[symbol]:
             yield tuple([symbol, b[0],
-                         b[1][0], b[1][1], b[1][2], b[1][3]])
+                         b[1][0], b[1][1], b[1][2], b[1][3], b[1][4]])
             # b[1][0], b[1][1], b[1][2], b[1][3], b[1][4]])
+
+
+
+
 
     def get_latest_bars(self, symbol, N=1):
         """

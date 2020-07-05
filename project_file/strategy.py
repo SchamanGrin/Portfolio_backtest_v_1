@@ -66,7 +66,7 @@ class BuyAndHoldStrategy(Strategy):
         for s in self.symbol_list:
             bought[s] = False
             bars = self.bars.get_latest_bars(s, N=1)
-            cost = bars[0][4]*self.portfolio.buy_quantity
+            cost = bars[0][5]*self.portfolio.buy_quantity
             if self.portfolio.current_positions[s] == 0 and free_cash > cost:
                 bought[s] = True
                 free_cash -= cost

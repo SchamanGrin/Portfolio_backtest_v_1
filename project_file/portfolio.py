@@ -413,9 +413,10 @@ class NaivePortfolio_add_founds(Portfolio):
             #добавляем строку в dataframe cashflow
             self.cashflow.loc[event.datetime, 'total'] = -self.add_funds
             #Получаем первое число следующего месяца, для переноса даты пополнения
-            #!Проверить на грабли
+
             next_month = np.datetime64(self.last_add_date, 'M') + np.timedelta64(1, 'M')
             self.last_add_date = np.datetime64(next_month, 'D')
+
 
 
 
