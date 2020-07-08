@@ -42,7 +42,7 @@ perfomancer - определения и методы оценки результ
 
 9. Создать конфигурационный файл для хранение входных параметров (https://habr.com/ru/post/485236/ , https://zhevak.wordpress.com/2015/01/08/%D1%80%D0%B0%D0%B1%D0%BE%D1%82%D0%B0-%D1%81-%D0%BA%D0%BE%D0%BD%D1%84%D0%B8%D0%B3%D0%B0%D0%BC%D0%B8-%D0%B2-%D0%BF%D1%80%D0%BE%D0%B3%D1%80%D0%B0%D0%BC%D0%BC%D0%B0%D1%85-%D0%BD%D0%B0-python/)
 9.1 (done) организовать хранение стартовой даты и стартового капитала
-9.3 сделать шаблон конфигурационного файла, для его создания
+9.3 (done)сделать шаблон конфигурационного файла, для его создания
 9.3 (done) Преобразовать конфиг входных параметров, что бы по сектору преобразовывать тип данных
 
 
@@ -53,7 +53,7 @@ perfomancer - определения и методы оценки результ
 11.1 Сделать окна для запроса ключа или файла с ключем (https://younglinux.info/tkinter/dialogbox.php, https://pythonspot.com/tk-file-dialogs/)
 11.2
 
-12. Перейди с datetime на numpy datetime (https://docs.scipy.org/doc/numpy-1.15.0/reference/arrays.datetime.html, https://www.geeksforgeeks.org/python-numpy-datetime64-method/#:~:text=With%20the%20help%20of%20numpy,datetime64()%20method.&text=Return%20%3A%20Return%20the%20date%20in,yyyy%2Dmm%2Ddd' )
+12. (done)Перейди с datetime на numpy datetime (https://docs.scipy.org/doc/numpy-1.15.0/reference/arrays.datetime.html, https://www.geeksforgeeks.org/python-numpy-datetime64-method/#:~:text=With%20the%20help%20of%20numpy,datetime64()%20method.&text=Return%20%3A%20Return%20the%20date%20in,yyyy%2Dmm%2Ddd' )
 
 13. Написать логику расчета приказа на покупку
 13.1

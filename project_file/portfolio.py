@@ -404,6 +404,8 @@ class NaivePortfolio_add_founds(Portfolio):
             self.current_holdings['commission']+=full_cost
             self.current_holdings['cash'] -= full_cost
             self.current_holdings['total'] -= full_cost
+            #записываем комиссию в таблицу cashflow
+            self.cashflow.loc[event.datetime, 'total'] -= full_cost
 
         """
         Пополняем портфель, в нужные даты
@@ -411,9 +413,8 @@ class NaivePortfolio_add_founds(Portfolio):
         if event.datetime > self.last_add_date:
             self.adding_funds()
             #добавляем строку в dataframe cashflow
-            self.cashflow.loc[event.datetime, 'total'] = -self.add_funds
+            self.cashflow.loc[event.datetime, 'total'] -= self.add_funds
             #Получаем первое число следующего месяца, для переноса даты пополнения
-
             next_month = np.datetime64(self.last_add_date, 'M') + np.timedelta64(1, 'M')
             self.last_add_date = np.datetime64(next_month, 'D')
 
@@ -460,8 +461,7 @@ class NaivePortfolio_add_founds(Portfolio):
         self.current_holdings['total'] -= (cost + fill.commission)
 
         #Заносим денежный поток на покупку
-        #print(fill.timeindex.date())
-        self.cashflow.loc[fill.timeindex, fill.symbol] = -(cost + fill.commission)
+        self.cashflow.loc[fill.timeindex, 'total'] = -(cost + fill.commission)
 
     def update_fill(self, event):
         """
@@ -539,6 +539,8 @@ class NaivePortfolio_add_founds(Portfolio):
 
         sharpe_ratio = create_sharpe_ratio(returns)
         max_dd, dd_duration = create_drawdowns(pnl)
+
+
 
         stats = [("Total Return", "%0.2f%%" % ((total_return - 1.0) * 100.0)),
                  ("Sharpe Ratio", "%0.2f" % sharpe_ratio),
