@@ -398,14 +398,14 @@ class NaivePortfolio_add_founds(Portfolio):
 
             if self.all_holdings[-1]['datetime'].month != event.datetime.month:
                 full_cost = 15.0
-            else:
-                full_cost = 0.0
+                self.current_holdings['commission']+=full_cost
+                self.current_holdings['cash'] -= full_cost
+                self.current_holdings['total'] -= full_cost
+                 #записываем комиссию в таблицу cashflow
+                #self.cashflow.loc[event.datetime, 'total'] -= full_cost
 
-            self.current_holdings['commission']+=full_cost
-            self.current_holdings['cash'] -= full_cost
-            self.current_holdings['total'] -= full_cost
-            #записываем комиссию в таблицу cashflow
-            self.cashflow.loc[event.datetime, 'total'] -= full_cost
+
+
 
         """
         Пополняем портфель, в нужные даты
@@ -413,7 +413,9 @@ class NaivePortfolio_add_founds(Portfolio):
         if event.datetime > self.last_add_date:
             self.adding_funds()
             #добавляем строку в dataframe cashflow
-            self.cashflow.loc[event.datetime, 'total'] -= self.add_funds
+            if self.add_funds > 0:
+                self.cashflow.loc[event.datetime, 'total'] = -self.add_funds
+
             #Получаем первое число следующего месяца, для переноса даты пополнения
             next_month = np.datetime64(self.last_add_date, 'M') + np.timedelta64(1, 'M')
             self.last_add_date = np.datetime64(next_month, 'D')
@@ -461,7 +463,7 @@ class NaivePortfolio_add_founds(Portfolio):
         self.current_holdings['total'] -= (cost + fill.commission)
 
         #Заносим денежный поток на покупку
-        self.cashflow.loc[fill.timeindex, 'total'] = -(cost + fill.commission)
+        self.cashflow.loc[fill.timeindex, fill.symbol] = -(cost + fill.commission)
 
     def update_fill(self, event):
         """
@@ -495,14 +497,14 @@ class NaivePortfolio_add_founds(Portfolio):
 
 
         if direction == 'LONG' and cur_quantity == 0:
-            order = OrderEvent(symbol, order_type, mkt_quantity, 'BUY')
+            order = OrderEvent(symbol, order_type, mkt_quantity, 'BUY', signal.datetime)
         if direction == 'SHORT' and cur_quantity == 0:
-            order = OrderEvent(symbol, order_type, mkt_quantity, 'SELL')
+            order = OrderEvent(symbol, order_type, mkt_quantity, 'SELL', signal.datetime)
 
         if direction == 'EXIT' and cur_quantity > 0:
-            order = OrderEvent(symbol, order_type, abs(cur_quantity), 'SELL')
+            order = OrderEvent(symbol, order_type, abs(cur_quantity), 'SELL', signal.datetime)
         if direction == 'EXIT' and cur_quantity < 0:
-            order = OrderEvent(symbol, order_type, abs(cur_quantity), 'BUY')
+            order = OrderEvent(symbol, order_type, abs(cur_quantity), 'BUY', signal.datetime)
         return order
 
     def update_signal(self, event):
@@ -540,12 +542,19 @@ class NaivePortfolio_add_founds(Portfolio):
         sharpe_ratio = create_sharpe_ratio(returns)
         max_dd, dd_duration = create_drawdowns(pnl)
 
+        #добавляем итоговые значения к cashflow
+        for col in list(self.cashflow):
+            self.cashflow.loc[self.equity_curve.index[-1], col] = self.equity_curve[col][-1]
+        self.cashflow.fillna(0.0, inplace=True)
+        xirr_total = xirr([(x, self.cashflow.loc[x]['total']) for x in self.cashflow.index])*100.0
+        returns = self.cashflow['total'].sum()
 
-
-        stats = [("Total Return", "%0.2f%%" % ((total_return - 1.0) * 100.0)),
+        stats = [('Returns', f'{returns:.2f}'),
+                 ("Total Return", "%0.2f%%" % ((total_return - 1.0) * 100.0)),
                  ("Sharpe Ratio", "%0.2f" % sharpe_ratio),
                  ("Max Drawdown", "%0.2f%%" % (max_dd * 100.0)),
-                 ("Drawdown Duration", "%d" % dd_duration)]
+                 ("Drawdown Duration", "%d" % dd_duration),
+                 ('XIRR', f'{xirr_total:.2f} %')]
         return stats
 
     def adding_funds(self):

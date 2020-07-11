@@ -71,9 +71,13 @@ def xnpv(rate, cashflows):
 def xirr(cashflows, guess=0.1):
     """
     Calculate the Internal Rate of Return of a series of cashflows at irregular intervals.
+    Расчет внутренней нормы доходности при нерегулярных денежных потоках
+
     Arguments
+    Аргументы
     ---------
     * cashflows: a list object in which each element is a tuple of the form (date, amount), where date is a python datetime.date object and amount is an integer or floating point number. Cash outflows (investments) are represented with negative amounts, and cash inflows (returns) are positive amounts.
+    * денежный поток, список объектов, где каждый элемент кортеж вида (дата, сумма), где дата - объект типа данных datetime.date и сумма целое число или число с правубщей точкой. Входящий денежный поток (инвестциии) представлены отрицательными значениями, а исходящий денежный поток (доход) представлены положительными значениями
     * guess (optional, default = 0.1): a guess at the solution to be used as a starting point for the numerical solution.
     Returns
     --------

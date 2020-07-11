@@ -47,7 +47,7 @@ class OrderEvent(Event):
     Обрабатывает событие отправки приказа Order в торговый движок. Приказ содержит тикер (например, GOOG), тип (market или limit), количество и направление.
     """
 
-    def __init__(self, symbol, order_type, quantity, direction):
+    def __init__(self, symbol, order_type, quantity, direction, timeindex):
         """
         Инициализирует тип приказа (маркет MKT или лимит LMT), также устанавливается число единиц финансового инструмента и направление ордера (BUY или SELL).
 
@@ -63,6 +63,7 @@ class OrderEvent(Event):
         self.order_type = order_type
         self.quantity = quantity
         self.direction = direction
+        self.timeindex = timeindex
 
     def print_order(self):
         """
