@@ -8,7 +8,7 @@ from abc import ABCMeta, abstractmethod
 from math import floor
 
 from event import FillEvent, OrderEvent
-from performance import create_sharpe_ratio, create_drawdowns, xirr
+from performance import create_sharpe_ratio, create_drawdowns, xirr, twrr
 
 class Portfolio(object):
     """
@@ -397,12 +397,11 @@ class NaivePortfolio_add_founds(Portfolio):
 
 
             if self.all_holdings[-1]['datetime'].month != event.datetime.month:
-                full_cost = 15.0
+                full_cost = 0.0
                 self.current_holdings['commission']+=full_cost
                 self.current_holdings['cash'] -= full_cost
                 self.current_holdings['total'] -= full_cost
-                 #записываем комиссию в таблицу cashflow
-                #self.cashflow.loc[event.datetime, 'total'] -= full_cost
+
 
 
 
@@ -546,7 +545,11 @@ class NaivePortfolio_add_founds(Portfolio):
         for col in list(self.cashflow):
             self.cashflow.loc[self.equity_curve.index[-1], col] = self.equity_curve[col][-1]
         self.cashflow.fillna(0.0, inplace=True)
+        #Считаем внутреннюю норму доходности (взвещенную по денежной стоимости норму доходности)
         xirr_total = xirr([(x, self.cashflow.loc[x]['total']) for x in self.cashflow.index])*100.0
+
+        #Считаем взвещенную по времени норму доходности
+        twrr_date = twrr(self.all_holdings)
         returns = self.cashflow['total'].sum()
 
         stats = [('Returns', f'{returns:.2f}'),
@@ -554,7 +557,8 @@ class NaivePortfolio_add_founds(Portfolio):
                  ("Sharpe Ratio", "%0.2f" % sharpe_ratio),
                  ("Max Drawdown", "%0.2f%%" % (max_dd * 100.0)),
                  ("Drawdown Duration", "%d" % dd_duration),
-                 ('XIRR', f'{xirr_total:.2f} %')]
+                 ('XIRR', f'{xirr_total:.2f} %'),
+                 ('TWRR', f'{twrr_date:.2f}')]
         return stats
 
     def adding_funds(self):

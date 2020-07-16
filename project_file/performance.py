@@ -56,10 +56,13 @@ def xnpv(rate, cashflows):
     Returns
     -------
     * returns a single value which is the NPV of the given cash flows.
+    Возращает значение приведенной стоимости денежных потоков
     Notes
     ---------------
     * The Net Present Value is the sum of each of cash flows discounted back to the date of the first cash flow. The discounted value of a given cash flow is A/(1+r)**(t-t0), where A is the amount, r is the discout rate, and (t-t0) is the time in years from the date of the first cash flow in the series (t0) to the date of the cash flow being added to the sum (t).
+    Приведенная стоимость денежных потоков это сумма каждого денежного потока приведенного к дате первого денежного потока.
     * This function is equivalent to the Microsoft Excel function of the same name.
+    Эта функция соответсвует Excel функции с таким же наименованием
     """
 
     chron_order = sorted(cashflows, key=lambda x: x[0])
@@ -91,3 +94,24 @@ def xirr(cashflows, guess=0.1):
     """
 
     return op.newton(lambda r: xnpv(r, cashflows), guess)
+
+def twrr(all_holdings):
+    """
+    Расчет взвешенной по времени доходности, основанной на не равных периодах
+    :param all_holdings: ежедневные значения стоимостей ортфеля и отдельных бумаг
+    :return: единственное значение  взвешенной по времени доходности портфеля
+    """
+
+    #Проверить на костыли!!!
+    df = pd.DataFrame(all_holdings)
+    df.set_index('datetime', inplace=True)
+    df['twrr_interwal'] = [0]*len(df.index)
+
+    # если значение в поле cash стало больше предыдущего, значит были добавлены день, значит надо делаем следующий период для расчета взвещеной по времени доходности
+    for row in df.index[1:]:
+        df['twrr_interwal'][row] = df.iloc[df.index.get_loc(row)-1]['twrr_interwal'] + ((df['cash'][row] - df.iloc[df.index.get_loc(row)-1]['cash']) > 0)
+
+
+    print(df)
+
+    return df

@@ -72,13 +72,13 @@ print('Стоимость портфеля:')
 for key, value in port.all_holdings[-1].items():
     print(f'{key}: {value}')
 
-
+print('****************')
 print('Количество позиций:')
 for key, value in port.current_positions.items():
     
     print(f'{key}: {value}')
 
-
+print('****************')
 
 #Вывод результатов по бэктесту
 print('Результативность порфтеля:')
