@@ -105,13 +105,18 @@ def twrr(all_holdings):
     #Проверить на костыли!!!
     df = pd.DataFrame(all_holdings)
     df.set_index('datetime', inplace=True)
-    df['twrr_interwal'] = [0]*len(df.index)
+    df['twrr_interval'] = [0]*len(df.index)
+    df['yeld'] = [0]*len(df.index)
 
-    # если значение в поле cash стало больше предыдущего, значит были добавлены день, значит надо делаем следующий период для расчета взвещеной по времени доходности
+    # если значение в поле cash стало больше предыдущего, значит были добавлены деньги, значит делаем следующий период для расчета взвешеной по времени доходности
     for row in df.index[1:]:
-        df['twrr_interwal'][row] = df.iloc[df.index.get_loc(row)-1]['twrr_interwal'] + ((df['cash'][row] - df.iloc[df.index.get_loc(row)-1]['cash']) > 0)
+        df['twrr_interval'][row] = df.iloc[df.index.get_loc(row)-1]['twrr_interval'] + ((df['cash'][row] - df.iloc[df.index.get_loc(row)-1]['cash']) > 0)
 
+    #Получаем список лет существования портфеля
+    years = pd.unique(df.index.year.values)
+    for y in years:
+        for interv in pd.unique(df[df.index.year == y]['twrr_interval'].values):
+            df.loc[(df.index.year == y) & (df.twrr_interval == interv)]['twrr_interval'] = interv #df[(df.index.year == y) & (df.twrr_interval == interv)].pct_change
 
-    print(df)
 
     return df
