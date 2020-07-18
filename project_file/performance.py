@@ -110,13 +110,16 @@ def twrr(all_holdings):
 
     # если значение в поле cash стало больше предыдущего, значит были добавлены деньги, значит делаем следующий период для расчета взвешеной по времени доходности
     for row in df.index[1:]:
-        df['twrr_interval'][row] = df.iloc[df.index.get_loc(row)-1]['twrr_interval'] + ((df['cash'][row] - df.iloc[df.index.get_loc(row)-1]['cash']) > 0)
+        df.loc[df.index == row, 'twrr_interval'] = df.iloc[df.index.get_loc(row)-1]['twrr_interval'] + ((df['cash'][row] - df.iloc[df.index.get_loc(row)-1]['cash']) > 0)
 
     #Получаем список лет существования портфеля
     years = pd.unique(df.index.year.values)
+
+    #считаем доходность внутри периода
     for y in years:
         for interv in pd.unique(df[df.index.year == y]['twrr_interval'].values):
-            df.loc[(df.index.year == y) & (df.twrr_interval == interv)]['twrr_interval'] = interv #df[(df.index.year == y) & (df.twrr_interval == interv)].pct_change
+            df_total = df[(df.index.year == y) & (df.twrr_interval == interv)]['total']
+            df.loc[((df.index.year == y) & (df.twrr_interval == interv)), 'yeld'] = 1 + (df_total[0] - df_total[-1])/df_total[-1]
 
 
     return df
