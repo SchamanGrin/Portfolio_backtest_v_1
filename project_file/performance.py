@@ -117,9 +117,9 @@ def twrr(all_holdings, cashflow):
     for row in df.index[1:]:
         df.loc[df.index == row, 'twrr_interval'] = df.iloc[df.index.get_loc(row)-1]['twrr_interval'] + (df['cashflow'][row] != 0)
 
+    #Расчет взвещенной по времени дохоности
+    #шаг 1. Готовим новый датафрейм, в котором будем хранить данные о доходностях за период между добавлениями / изъятиями денег
     df_year = pd.DataFrame(columns=['year', 'twrr_interval' ,'yeld'])
-
-
 
     #считаем доходность внутри года по периодам
     for y in pd.unique(df.index.year.values):
@@ -129,11 +129,19 @@ def twrr(all_holdings, cashflow):
             #поставить обработку деления на ноль, при нулевой начальной сумме
             df_year = pd.concat((df_year, pd.DataFrame({'year':[y], 'twrr_interval': [interv], 'yeld': [df_total[0]/df_total[-1]-1]})), ignore_index=True)
 
-    #готовить данные для
+    #Готовим данные для расчета доходности за год. Прибавляем 1 к значениям доходностей за интевал между пополнениями / изъятиями
     df_year['yeld_1'] = 1 + df_year['yeld']
+    #шаг 2. готовим новый датафрейм, в котором расчитываем произведение (1 + доходность за период) за год. Получаем доходность за год + 1
     df_year_yeld = df_year.groupby(['year']).yeld_1.prod().reset_index().rename(columns={'yeld_1':'yeld_to_year'})
 
-    df_year_yeld['yeld_to_year_1'] = (df_year_yeld['yeld_to_year'] - 1)*100
+    #шаг 3. Приводим ежегодную доходность по периодам к годовому значению, на случай, если первый / последний год были не полными
+
+
+
+    df_year_yeld['yeld_to_year_%'] = (df_year_yeld['yeld_to_year'] - 1)*100
+
+    #шаг 4. расчитываем среднюю доходность за весь период владения
+
     mean_yeld = (df_year_yeld['yeld_to_year'].prod()**(1/df_year_yeld['yeld_to_year'].count())-1)*100
 
     return mean_yeld
