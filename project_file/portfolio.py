@@ -533,6 +533,11 @@ class NaivePortfolio_add_founds(Portfolio):
         """
         Создает список статистических показателей для портфолио — коэффициент Шарпа и данные по просадке.
         """
+
+        #Считаем взвещенную по времени норму доходности
+        twrr_date = twrr(self.all_holdings, self.cashflow)
+
+
         self.create_equity_curve_dataframe()
         total_return = self.equity_curve['equity_curve'][-1]
         returns = self.equity_curve['returns']
@@ -548,8 +553,7 @@ class NaivePortfolio_add_founds(Portfolio):
         #Считаем внутреннюю норму доходности (взвещенную по денежной стоимости норму доходности)
         xirr_total = xirr([(x, self.cashflow.loc[x]['total']) for x in self.cashflow.index])*100.0
 
-        #Считаем взвещенную по времени норму доходности
-        twrr_date = twrr(self.all_holdings)
+
         returns = self.cashflow['total'].sum()
 
         stats = [('Returns', f'{returns:.2f}'),

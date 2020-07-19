@@ -95,10 +95,12 @@ def xirr(cashflows, guess=0.1):
 
     return op.newton(lambda r: xnpv(r, cashflows), guess)
 
-def twrr(all_holdings):
+def twrr(all_holdings, cashflow):
     """
-    Расчет взвешенной по времени доходности, основанной на не равных периодах
-    :param all_holdings: ежедневные значения стоимостей ортфеля и отдельных бумаг
+    Расчет взвешенной по времени доходности, основанной на не равных периодах внесения и изъятия денег
+    :param
+    *all_holdings: ежедневные значения стоимостей портфеля и отдельных бумаг
+    *cashflow: перечень внесений / изъятий деенжных средств с привязкой к дате
     :return: единственное значение  взвешенной по времени доходности портфеля
     """
 
@@ -108,18 +110,30 @@ def twrr(all_holdings):
     df['twrr_interval'] = [0]*len(df.index)
     df['yeld'] = [0]*len(df.index)
 
-    # если значение в поле cash стало больше предыдущего, значит были добавлены деньги, значит делаем следующий период для расчета взвешеной по времени доходности
+    df.loc[cashflow.index, 'cashflow'] = cashflow.total
+    df.fillna(0, inplace=True)
+
+    # если в момент времени было внесение денег, начинаем новый период
     for row in df.index[1:]:
-        df.loc[df.index == row, 'twrr_interval'] = df.iloc[df.index.get_loc(row)-1]['twrr_interval'] + ((df['cash'][row] - df.iloc[df.index.get_loc(row)-1]['cash']) > 0)
+        df.loc[df.index == row, 'twrr_interval'] = df.iloc[df.index.get_loc(row)-1]['twrr_interval'] + (df['cashflow'][row] != 0)
 
-    #Получаем список лет существования портфеля
-    years = pd.unique(df.index.year.values)
+    df_year = pd.DataFrame(columns=['year', 'twrr_interval' ,'yeld'])
 
-    #считаем доходность внутри периода
-    for y in years:
+
+
+    #считаем доходность внутри года по периодам
+    for y in pd.unique(df.index.year.values):
         for interv in pd.unique(df[df.index.year == y]['twrr_interval'].values):
             df_total = df[(df.index.year == y) & (df.twrr_interval == interv)]['total']
-            df.loc[((df.index.year == y) & (df.twrr_interval == interv)), 'yeld'] = 1 + (df_total[0] - df_total[-1])/df_total[-1]
 
+            #поставить обработку деления на ноль, при нулевой начальной сумме
+            df_year = pd.concat((df_year, pd.DataFrame({'year':[y], 'twrr_interval': [interv], 'yeld': [df_total[0]/df_total[-1]-1]})), ignore_index=True)
 
-    return df
+    #готовить данные для
+    df_year['yeld_1'] = 1 + df_year['yeld']
+    df_year_yeld = df_year.groupby(['year']).yeld_1.prod().reset_index().rename(columns={'yeld_1':'yeld_to_year'})
+
+    df_year_yeld['yeld_to_year_1'] = (df_year_yeld['yeld_to_year'] - 1)*100
+    mean_yeld = (df_year_yeld['yeld_to_year'].prod()**(1/df_year_yeld['yeld_to_year'].count())-1)*100
+
+    return mean_yeld
