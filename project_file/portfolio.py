@@ -534,8 +534,14 @@ class NaivePortfolio_add_founds(Portfolio):
         Создает список статистических показателей для портфолио — коэффициент Шарпа и данные по просадке.
         """
 
-        #Считаем взвещенную по времени норму доходности
-        twrr_date = twrr(self.all_holdings, self.cashflow)
+        #Считаем взвещенную по времени норму доходности портфеля
+        #Готовим dataframe
+        df = pd.DataFrame(self.all_holdings)
+        df.set_index('datetime', inplace=True)
+        df.loc[self.cashflow.index, 'cashflow'] = self.cashflow.total
+        df.fillna(0, inplace=True)
+
+        twrr_date = twrr(df[['total', 'cashflow']])
 
 
         self.create_equity_curve_dataframe()
@@ -561,8 +567,8 @@ class NaivePortfolio_add_founds(Portfolio):
                  ("Sharpe Ratio", "%0.2f" % sharpe_ratio),
                  ("Max Drawdown", "%0.2f%%" % (max_dd * 100.0)),
                  ("Drawdown Duration", "%d" % dd_duration),
-                 ('XIRR', f'{xirr_total:.2f} %'),
-                 ('TWRR', f'{twrr_date:.2f}')]
+                 ('XIRR', f'{xirr_total:.2f}%'),
+                 ('TWRR', f'{twrr_date:.2f}%')]
         return stats
 
     def adding_funds(self):
