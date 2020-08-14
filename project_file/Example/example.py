@@ -1,13 +1,23 @@
 import pandas as pd
+from performance import twrr
 
-dt = pd.DataFrame({'col1': [5,6], 'col2':[3,4]})
-print(dt)
+data = pd.read_csv(
+    'symbol/SPY.csv', header=0, index_col=0,
+                names=['timestamp', 'open', 'low', 'high', 'close', 'volume'], parse_dates=['timestamp']
+)
+start_date = pd.to_datetime('2010-01-01')
+data.reindex(pd.to_datetime(data.index, '%Y%m%d'))
 
-df = pd.DataFrame({'col1': [7], 'col2':[8]})
-print(df)
+data_cashflow = pd.DataFrame(data.loc[data.index >= start_date]['close'][::-1])
+data_cashflow.loc[:,'cashflow'] = 0.*len(data_cashflow.index)
+data_cashflow['cashflow'][0]=-data_cashflow['close'][0]
+data_cashflow['cashflow'][-1]=data_cashflow['close'][-1]
+data_cashflow.rename(columns={'close':'total'}, inplace=True)
 
-dt.append(df, ignore_index=True)
-print(dt)
+result = twrr(data_cashflow)
+
+for key, value in result.items():
+    print(f'{key}:{value}')
 
 
 

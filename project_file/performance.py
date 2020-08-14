@@ -2,6 +2,7 @@
 
 import numpy as np
 import pandas as pd
+from scipy.stats.mstats import gmean
 
 from scipy import optimize as op
 
@@ -97,7 +98,9 @@ def xirr(cashflows, guess=0.1):
 
 def twrr(df):
     """
-    Расчет взвешенной по времени доходности, основанной на не равных периодах внесения и изъятия денег
+    Расчет взвешенной по времени доходности, основанной на не равных периодах внесения и изъятия денег в формате DataFrame
+
+
     :param
     *all_holdings: ежедневные значения стоимостей портфеля и отдельных бумаг
     *cashflow: перечень внесений / изъятий деенжных средств с привязкой к дате
@@ -111,6 +114,7 @@ def twrr(df):
 
     # если в момент времени было внесение денег, начинаем новый период
     for row in df.index[1:]:
+        #сделать относительные ссылки на столбец
         df.loc[df.index == row, 'twrr_interval'] = df.iloc[df.index.get_loc(row)-1]['twrr_interval'] + (df['cashflow'][row] != 0)
 
     #Расчет взвещенной по времени дохоности
@@ -123,7 +127,8 @@ def twrr(df):
             df_total = df[(df.index.year == y) & (df.twrr_interval == interv)]['total']
 
             #поставить обработку деления на ноль, при нулевой начальной сумме
-            df_year = pd.concat((df_year, pd.DataFrame({'year':[y], 'twrr_interval': [interv], 'yeld': [df_total[0]/df_total[-1]-1]})), ignore_index=True)
+            #считаем доходность за год и период между пополнениями
+            df_year = pd.concat((df_year, pd.DataFrame({'year':[y], 'twrr_interval': [interv], 'yeld': [df_total[-1]/df_total[0]-1]})), ignore_index=True)
 
     #Готовим данные для расчета доходности за год. Прибавляем 1 к значениям доходностей за интевал между пополнениями / изъятиями
     df_year['yeld_1'] = 1 + df_year['yeld']
@@ -134,14 +139,16 @@ def twrr(df):
     #шаг 2. готовим новый датафрейм, в котором расчитываем произведение (1 + доходность за период) за год. Получаем доходность за год + 1
     df_year_yeld = df_year.groupby(['year']).yeld_1.prod().reset_index().rename(columns={'yeld_1':'yeld_to_year'})
 
-
-
-
-
+    #формируем столбец с доходностью по годам
     df_year_yeld['yeld_to_year_%'] = (df_year_yeld['yeld_to_year'] - 1)*100
 
-    #шаг 4. расчитываем среднюю доходность за весь период владения, используя в качестве количества лет 365/количество дней в датасете
+    #шаг 3. расчитываем среднюю доходность за весь период владения, используя в качестве количества лет количество дней в датасете/365
+    t = int((df.index[-1]-df.index[0]).days)/365.
+    mean_yeld = (df_year_yeld['yeld_to_year'].prod()**(1./t)-1)*100.
 
-    mean_yeld = (df_year_yeld['yeld_to_year'].prod()**(365./len(df)))*100
+    df_t = df_year_yeld[['year','yeld_to_year_%']]
+    df_t.set_index('year', inplace=True)
 
-    return mean_yeld
+    out = {'total_return':total_return, 'mean_yeld': mean_yeld, 'year_yeld':df_t}
+
+    return out

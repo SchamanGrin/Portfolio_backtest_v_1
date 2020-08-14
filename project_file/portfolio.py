@@ -1,11 +1,8 @@
 # portfolio.py
-import datetime
 import numpy as np
 import pandas as pd
-from queue import Queue
 
 from abc import ABCMeta, abstractmethod
-from math import floor
 
 from event import FillEvent, OrderEvent
 from performance import create_sharpe_ratio, create_drawdowns, xirr, twrr
