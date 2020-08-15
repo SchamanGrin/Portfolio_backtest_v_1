@@ -5,7 +5,7 @@ data = pd.read_csv(
     'symbol/SPY.csv', header=0, index_col=0,
                 names=['timestamp', 'open', 'low', 'high', 'close', 'volume'], parse_dates=['timestamp']
 )
-start_date = pd.to_datetime('2010-01-01')
+start_date = pd.to_datetime('2020-03-08')
 data.reindex(pd.to_datetime(data.index, '%Y%m%d'))
 
 data_cashflow = pd.DataFrame(data.loc[data.index >= start_date]['close'][::-1])
