@@ -538,34 +538,27 @@ class NaivePortfolio_add_founds(Portfolio):
         df.loc[self.cashflow.index, 'cashflow'] = self.cashflow.total
         df.fillna(0, inplace=True)
 
-        twrr_date = twrr(df[['total', 'cashflow']])
+        twrr_tr, twrr_mean, twrr_years = twrr(df[['total', 'cashflow']])
+
 
 
         self.create_equity_curve_dataframe()
-        total_return = self.equity_curve['equity_curve'][-1]
-        returns = self.equity_curve['returns']
-        pnl = self.equity_curve['equity_curve']
-
-        sharpe_ratio = create_sharpe_ratio(returns)
-        max_dd, dd_duration = create_drawdowns(pnl)
 
         #добавляем итоговые значения к cashflow
         for col in list(self.cashflow):
             self.cashflow.loc[self.equity_curve.index[-1], col] = self.equity_curve[col][-1]
         self.cashflow.fillna(0.0, inplace=True)
+
         #Считаем внутреннюю норму доходности (взвещенную по денежной стоимости норму доходности)
         xirr_total = xirr([(x, self.cashflow.loc[x]['total']) for x in self.cashflow.index])*100.0
 
 
-        returns = self.cashflow['total'].sum()
 
-        stats = [('Returns', f'{returns:.2f}'),
-                 ("Total Return", "%0.2f%%" % ((total_return - 1.0) * 100.0)),
-                 ("Sharpe Ratio", "%0.2f" % sharpe_ratio),
-                 ("Max Drawdown", "%0.2f%%" % (max_dd * 100.0)),
-                 ("Drawdown Duration", "%d" % dd_duration),
-                 ('XIRR', f'{xirr_total:.2f}%'),
-                 ('TWRR', f'{twrr_date:.2f}%')]
+        stats = [('XIRR', f'{xirr_total:.2f}%'),
+                 ('TWRR total return', f'{twrr_tr:.2f}%'),
+                 ('TWRR mean', f'{twrr_mean:.2f}%'),
+                 #проверить вывод на костыли
+                 ('TWRR by year', twrr_years.iloc[:,0].apply(lambda x: f'{x:.2f}%'))]
         return stats
 
     def adding_funds(self):

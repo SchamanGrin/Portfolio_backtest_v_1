@@ -6,6 +6,7 @@ from scipy.stats.mstats import gmean
 
 from scipy import optimize as op
 
+
 def create_sharpe_ratio(returns, periods=252):
     """
     Создает коэффициент Шарпа для стратегии, основанной на бенчмарке ноль (нет информации о рисках ).
@@ -133,8 +134,8 @@ def twrr(df):
     #Готовим данные для расчета доходности за год. Прибавляем 1 к значениям доходностей за интевал между пополнениями / изъятиями
     df_year['yeld_1'] = 1 + df_year['yeld']
 
-    #считаем общую доходность взвешенную по времени
-    total_return = (df_year['yeld_1'].prod()-1)*100
+
+
 
     #шаг 2. готовим новый датафрейм, в котором расчитываем произведение (1 + доходность за период) за год. Получаем доходность за год + 1
     df_year_yeld = df_year.groupby(['year']).yeld_1.prod().reset_index().rename(columns={'yeld_1':'yeld_to_year'})
@@ -144,11 +145,17 @@ def twrr(df):
 
     #шаг 3. расчитываем среднюю доходность за весь период владения, используя в качестве количества лет количество дней в датасете/365
     t = int((df.index[-1]-df.index[0]).days)/365.
-    mean_yeld = (df_year_yeld['yeld_to_year'].prod()**(1./t)-1)*100.
+    mean_yeld = (df_year_yeld['yeld_to_year'].prod() ** (1. / t) - 1) * 100.
+
+    # считаем общую доходность взвешенную по времени
+    total_return = (df_year['yeld_1'].prod() - 1) * 100
+
+
+
 
     df_t = df_year_yeld[['year','yeld_to_year_%']]
     df_t.set_index('year', inplace=True)
 
-    out = {'total_return':total_return, 'mean_yeld': mean_yeld, 'year_yeld':df_t}
+    out = [total_return, mean_yeld, df_t]
 
     return out

@@ -16,8 +16,6 @@ data_cashflow.rename(columns={'close':'total'}, inplace=True)
 
 result = twrr(data_cashflow)
 
-for key, value in result.items():
-    print(f'{key}:{value}')
 
 
 
