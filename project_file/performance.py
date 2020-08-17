@@ -122,9 +122,18 @@ def twrr(df):
 
 
     # если в момент времени было внесение денег, начинаем новый период
-    for row in df.index[1:]:
+    # for row in df.index[1:]:
+    #     #сделать относительные ссылки на столбец
+    #     dfr = df[:row].cashflow
+    #     df.twrr_interval.loc[row] = dfr[dfr != 0].count() - 1
+    dfr = df.reindex(range(len(df)))
+    dfr["cf"] = df["cashflow"]
+    dfr["int"] = df["twrr_interval"]
+
+    for row in dfr.index[1:]:
         #сделать относительные ссылки на столбец
-        df.loc[df.index == row, 'twrr_interval'] = df.iloc[df.index.get_loc(row)-1]['twrr_interval'] + (df['cashflow'][row] != 0)
+        dfr.twrr_interval.iloc[row] = dfr.twrr_interval.iloc[row - 1] + (dfr.cashflow.loc[row] != 0)
+    df.twrr_interval = dfr.twrr_interval
 
     #Расчет взвещенной по времени дохоности
     #шаг 1. Готовим новый датафрейм, в котором будем хранить данные о доходностях за период между добавлениями / изъятиями денег
