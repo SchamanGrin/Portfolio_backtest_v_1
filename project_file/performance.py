@@ -126,6 +126,7 @@ def twrr(df):
         #сделать относительные ссылки на столбец
         df.loc[df.index == row, 'twrr_interval'] = df.iloc[df.index.get_loc(row)-1]['twrr_interval'] + (df['cashflow'][row] != 0)
 
+
     #Расчет взвещенной по времени дохоности
     #шаг 1. Готовим новый датафрейм, в котором будем хранить данные о доходностях за период между добавлениями / изъятиями денег
     df_year = pd.DataFrame(columns=['year', 'twrr_interval', 'yeld'])
