@@ -105,7 +105,7 @@ def xirr(cashflows, guess=0.1):
     out = [xirr_mean]
     return out
 
-def twrr(df):
+def twrr_1(df):
     """
     Расчет взвешенной по времени доходности, основанной на не равных периодах внесения и изъятия денег в формате DataFrame
 
@@ -126,6 +126,80 @@ def twrr(df):
         #сделать относительные ссылки на столбец
         df.loc[df.index == row, 'twrr_interval'] = df.iloc[df.index.get_loc(row)-1]['twrr_interval'] + (df['cashflow'][row] != 0)
 
+
+    #Расчет взвещенной по времени дохоности
+    #шаг 1. Готовим новый датафрейм, в котором будем хранить данные о доходностях за период между добавлениями / изъятиями денег
+    df_year = pd.DataFrame(columns=['year', 'twrr_interval', 'yeld'])
+
+    #считаем доходность внутри года по периодам
+    for y in pd.unique(df.index.year.values):
+        for interv in pd.unique(df[df.index.year == y]['twrr_interval'].values):
+            df_total = df[(df.index.year == y) & (df.twrr_interval == interv)]['total']
+
+            #поставить обработку деления на ноль, при нулевой начальной сумме
+            #считаем доходность за год и период между пополнениями
+            df_year = pd.concat((df_year, pd.DataFrame({'year':[y], 'twrr_interval': [interv], 'yeld': [df_total[-1]/df_total[0]-1]})), ignore_index=True)
+
+    #Готовим данные для расчета доходности за год. Прибавляем 1 к значениям доходностей за интевал между пополнениями / изъятиями
+    df_year['yeld_1'] = 1 + df_year['yeld']
+
+
+
+
+    #шаг 2. готовим новый датафрейм, в котором расчитываем произведение (1 + доходность за период) за год. Получаем доходность за год + 1
+    df_year_yeld = df_year.groupby(['year']).yeld_1.prod().reset_index().rename(columns={'yeld_1':'yeld_to_year'})
+
+    #формируем столбец с доходностью по годам
+    df_year_yeld['yeld_to_year_%'] = (df_year_yeld['yeld_to_year'] - 1)*100
+
+    #шаг 3. расчитываем среднюю доходность за весь период владения, используя в качестве количества лет количество дней в датасете/365
+    t = int((df.index[-1]-df.index[0]).days)/365.
+    mean_yeld = (df_year_yeld['yeld_to_year'].prod() ** (1. / t) - 1) * 100.
+
+    # считаем общую доходность взвешенную по времени
+    total_return = (df_year['yeld_1'].prod() - 1) * 100
+
+
+
+
+    df_t = df_year_yeld[['year','yeld_to_year_%']]
+    df_t.set_index('year', inplace=True)
+
+    out = [total_return, mean_yeld, df_t]
+
+    return out
+
+
+def twrr(df):
+    """
+    Расчет взвешенной по времени доходности, основанной на не равных периодах внесения и изъятия денег в формате DataFrame
+
+
+    :param
+    *all_holdings: ежедневные значения стоимостей портфеля и отдельных бумаг
+    *cashflow: перечень внесений / изъятий деенжных средств с привязкой к дате
+    :return: единственное значение  взвешенной по времени доходности портфеля
+    """
+
+    #Проверить на костыли!!!
+
+    df.loc[:,'twrr_interval'] = [0]*len(df.index)
+
+
+    # если в момент времени было внесение денег, начинаем новый период
+    # for row in df.index[1:]:
+    #     #сделать относительные ссылки на столбец
+    #     dfr = df[:row].cashflow
+    #     df.twrr_interval.loc[row] = dfr[dfr != 0].count() - 1
+
+    dfr = df
+    dfr['numer'] = range(len(dfr))
+
+
+    for row in dfr.index[1:]:
+        #сделать относительные ссылки на столбец
+        dfr.twrr_interval.iloc[row] = dfr.twrr_interval.iloc[row - 1] + (dfr.cashflow.loc[row] != 0)
+    df.twrr_interval = dfr.twrr_interval
 
     #Расчет взвещенной по времени дохоности
     #шаг 1. Готовим новый датафрейм, в котором будем хранить данные о доходностях за период между добавлениями / изъятиями денег

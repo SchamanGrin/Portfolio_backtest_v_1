@@ -1,5 +1,9 @@
+import time
+
 import pandas as pd
-from performance import twrr
+from performance import twrr, twrr_1
+
+
 
 data = pd.read_csv(
     'symbol/SPY.csv', header=0, index_col=0,
@@ -16,8 +20,13 @@ data_cashflow.rename(columns={'close':'total'}, inplace=True)
 
 data_cashflow['year'] = data_cashflow.index.year
 
+# start_twrr_1 = time.time()
+# result = twrr_1(data_cashflow)
+# print(f'Время функции twrr_1: {time.time() - start_twrr_1:.2f}с')
+
+
+start_twrr = time.time()
 result = twrr(data_cashflow)
-
-
+print(f'Время функции twrr: {time.time() - start_twrr:.2f}с')
 
 
