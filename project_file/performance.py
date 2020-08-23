@@ -207,8 +207,8 @@ def twrr(df):
 
     df['year'] = df.index.year
 
-    t = pd.DataFrame(df.groupby(['year', 'twrr_interval'])['total'].sum()).reset_index()
-    t1 = pd.DataFrame(df.groupby(['year', 'twrr_interval'])['total'].pct_change()).reset_index()
+    t = df.groupby([df.index.year, 'twrr_interval']).total.sum().reset_index()
+    t1 = df.groupby([df.index.year, 'twrr_interval']).total.pct_change().reset_index()
 
     t = pd.DataFrame({'total': [df.groupby(['year', 'twrr_interval']).pct_change()]}).reset_index()
 
