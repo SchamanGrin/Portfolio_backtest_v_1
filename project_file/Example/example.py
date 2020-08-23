@@ -18,7 +18,7 @@ data_cashflow['cashflow'][0]=-data_cashflow['close'][0]
 data_cashflow['cashflow'][-1]=data_cashflow['close'][-1]
 data_cashflow.rename(columns={'close':'total'}, inplace=True)
 
-data_cashflow['year'] = data_cashflow.index.year
+#data_cashflow['year'] = data_cashflow.index.year
 
 # start_twrr_1 = time.time()
 # result = twrr_1(data_cashflow)

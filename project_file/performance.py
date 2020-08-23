@@ -180,7 +180,6 @@ def twrr(df):
     *cashflow: перечень внесений / изъятий деенжных средств с привязкой к дате
     :return: единственное значение  взвешенной по времени доходности портфеля
     """
-
     #Проверить на костыли!!!
 
     df.loc[:,'twrr_interval'] = [0]*len(df.index)
@@ -192,18 +191,26 @@ def twrr(df):
     #     dfr = df[:row].cashflow
     #     df.twrr_interval.loc[row] = dfr[dfr != 0].count() - 1
 
-    dfr = df
-    dfr['numer'] = range(len(dfr))
-
+    dfr = df[['cashflow','twrr_interval']]
+    dfr['id'] = range(len(df))
+    dfr.set_index('id', inplace=True)
 
     for row in dfr.index[1:]:
         #сделать относительные ссылки на столбец
         dfr.twrr_interval.iloc[row] = dfr.twrr_interval.iloc[row - 1] + (dfr.cashflow.loc[row] != 0)
-    df.twrr_interval = dfr.twrr_interval
+
+    df['twrr_interval'] = dfr.twrr_interval.tolist()
 
     #Расчет взвещенной по времени дохоности
     #шаг 1. Готовим новый датафрейм, в котором будем хранить данные о доходностях за период между добавлениями / изъятиями денег
-    df_year = pd.DataFrame(columns=['year', 'twrr_interval', 'yeld'])
+    #df_year = pd.DataFrame(columns=['year', 'twrr_interval', 'yeld'])
+
+    df['year'] = df.index.year
+
+    t = pd.DataFrame(df.groupby(['year', 'twrr_interval'])['total'].sum()).reset_index()
+    t1 = pd.DataFrame(df.groupby(['year', 'twrr_interval'])['total'].pct_change()).reset_index()
+
+    t = pd.DataFrame({'total': [df.groupby(['year', 'twrr_interval']).pct_change()]}).reset_index()
 
     #считаем доходность внутри года по периодам
     for y in pd.unique(df.index.year.values):
