@@ -180,72 +180,26 @@ def twrr(df):
     *cashflow: перечень внесений / изъятий деенжных средств с привязкой к дате
     :return: единственное значение  взвешенной по времени доходности портфеля
     """
-    #Проверить на костыли!!!
-
-    df.loc[:,'twrr_interval'] = [0]*len(df.index)
-
-
-    # если в момент времени было внесение денег, начинаем новый период
-    # for row in df.index[1:]:
-    #     #сделать относительные ссылки на столбец
-    #     dfr = df[:row].cashflow
-    #     df.twrr_interval.loc[row] = dfr[dfr != 0].count() - 1
-
-    dfr = df[['cashflow','twrr_interval']]
-    dfr['id'] = range(len(df))
-    dfr.set_index('id', inplace=True)
-
-    for row in dfr.index[1:]:
-        #сделать относительные ссылки на столбец
-        dfr.twrr_interval.iloc[row] = dfr.twrr_interval.iloc[row - 1] + (dfr.cashflow.loc[row] != 0)
-
-    df['twrr_interval'] = dfr.twrr_interval.tolist()
-
-    #Расчет взвещенной по времени дохоности
-    #шаг 1. Готовим новый датафрейм, в котором будем хранить данные о доходностях за период между добавлениями / изъятиями денег
-    #df_year = pd.DataFrame(columns=['year', 'twrr_interval', 'yeld'])
-
-    df['year'] = df.index.year
-
-    t = df.groupby([df.index.year, 'twrr_interval']).total.sum().reset_index()
-    t1 = df.groupby([df.index.year, 'twrr_interval']).total.pct_change().reset_index()
-
-    t = pd.DataFrame({'total': [df.groupby(['year', 'twrr_interval']).pct_change()]}).reset_index()
+    #Формируем периоды между поступлениями / изъятиями денежных средств
+    df['twrr_interval'] = np.cumsum(df['cashflow'] != 0) - 1
 
     #считаем доходность внутри года по периодам
-    for y in pd.unique(df.index.year.values):
-        for interv in pd.unique(df[df.index.year == y]['twrr_interval'].values):
-            df_total = df[(df.index.year == y) & (df.twrr_interval == interv)]['total']
+    df['revenue'] = df.groupby([df.index.year, 'twrr_interval']).total.pct_change() + 1
+    df['revenue'].fillna(1, inplace = True)
 
-            #поставить обработку деления на ноль, при нулевой начальной сумме
-            #считаем доходность за год и период между пополнениями
-            df_year = pd.concat((df_year, pd.DataFrame({'year':[y], 'twrr_interval': [interv], 'yeld': [df_total[-1]/df_total[0]-1]})), ignore_index=True)
-
-    #Готовим данные для расчета доходности за год. Прибавляем 1 к значениям доходностей за интевал между пополнениями / изъятиями
-    df_year['yeld_1'] = 1 + df_year['yeld']
+    df_revenue = df.groupby([df.index.year, 'twrr_interval']).revenue.prod().reset_index()
+    df_revenue.rename(columns = {'datetime':'year'}, inplace=True)
 
 
+    #Готовим данные для расчета средней доходности за год
+    df_year_revenue = pd.DataFrame(df_revenue.groupby(['year']).revenue.prod(), columns=['revenue'])
+    df_year_revenue['annual return'] = (df_year_revenue['revenue'] - 1)*100
 
-
-    #шаг 2. готовим новый датафрейм, в котором расчитываем произведение (1 + доходность за период) за год. Получаем доходность за год + 1
-    df_year_yeld = df_year.groupby(['year']).yeld_1.prod().reset_index().rename(columns={'yeld_1':'yeld_to_year'})
-
-    #формируем столбец с доходностью по годам
-    df_year_yeld['yeld_to_year_%'] = (df_year_yeld['yeld_to_year'] - 1)*100
-
-    #шаг 3. расчитываем среднюю доходность за весь период владения, используя в качестве количества лет количество дней в датасете/365
+    #расчитываем среднюю годовую доходность за весь период владения, используя в качестве количества лет количество дней в датасете/365
     t = int((df.index[-1]-df.index[0]).days)/365.
-    mean_yeld = (df_year_yeld['yeld_to_year'].prod() ** (1. / t) - 1) * 100.
+    mean_revenue = (df_year_revenue.revenue.prod() ** (1. / t) - 1) * 100.
 
     # считаем общую доходность взвешенную по времени
-    total_return = (df_year['yeld_1'].prod() - 1) * 100
+    total_return = (df_revenue.revenue.prod() - 1)*100
 
-
-
-
-    df_t = df_year_yeld[['year','yeld_to_year_%']]
-    df_t.set_index('year', inplace=True)
-
-    out = [total_return, mean_yeld, df_t]
-
-    return out
+    return [total_return, mean_revenue, df_year_revenue['annual return']]
