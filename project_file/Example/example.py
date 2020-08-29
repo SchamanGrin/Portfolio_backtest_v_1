@@ -20,9 +20,9 @@ data_cashflow.rename(columns={'close':'total'}, inplace=True)
 
 #data_cashflow['year'] = data_cashflow.index.year
 
-# start_twrr_1 = time.time()
-# result = twrr_1(data_cashflow)
-# print(f'Время функции twrr_1: {time.time() - start_twrr_1:.2f}с')
+start_twrr_1 = time.time()
+result = twrr_1(data_cashflow)
+print(f'Время функции twrr_1: {time.time() - start_twrr_1:.2f}с')
 
 
 start_twrr = time.time()

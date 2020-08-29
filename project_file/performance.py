@@ -188,7 +188,7 @@ def twrr(df):
     df['revenue'].fillna(1, inplace = True)
 
     df_revenue = df.groupby([df.index.year, 'twrr_interval']).revenue.prod().reset_index()
-    df_revenue.rename(columns = {'datetime':'year'}, inplace=True)
+    df_revenue.rename(columns = {df_revenue.columns[0]:'year'}, inplace=True)
 
 
     #Готовим данные для расчета средней доходности за год
