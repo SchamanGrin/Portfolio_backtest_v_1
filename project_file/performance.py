@@ -2,7 +2,6 @@
 
 import numpy as np
 import pandas as pd
-from scipy.stats.mstats import gmean
 
 from scipy import optimize as op
 
@@ -98,108 +97,54 @@ def xirr(cashflows, guess=0.1):
 
 
 
-    xirr_mean = op.newton(lambda r: xnpv(r, cashflows), guess)
+    xirr_total = op.newton(lambda r: xnpv(r, cashflows), guess)
 
-    xirr_total = []
-
-    out = [xirr_mean]
+    out = [xirr_total]
     return out
 
-def twrr_1(df):
-    """
-    Расчет взвешенной по времени доходности, основанной на не равных периодах внесения и изъятия денег в формате DataFrame
+def xirr_1(cashflows, guess=0.1):
 
-
-    :param
-    *all_holdings: ежедневные значения стоимостей портфеля и отдельных бумаг
-    *cashflow: перечень внесений / изъятий деенжных средств с привязкой к дате
-    :return: единственное значение  взвешенной по времени доходности портфеля
-    """
-
-    #Проверить на костыли!!!
-
-    df.loc[:,'twrr_interval'] = [0]*len(df.index)
-
-
-    # если в момент времени было внесение денег, начинаем новый период
-    for row in df.index[1:]:
-        #сделать относительные ссылки на столбец
-        df.loc[df.index == row, 'twrr_interval'] = df.iloc[df.index.get_loc(row)-1]['twrr_interval'] + (df['cashflow'][row] != 0)
-
-
-    #Расчет взвещенной по времени дохоности
-    #шаг 1. Готовим новый датафрейм, в котором будем хранить данные о доходностях за период между добавлениями / изъятиями денег
-    df_year = pd.DataFrame(columns=['year', 'twrr_interval', 'yeld'])
-
-    #считаем доходность внутри года по периодам
-    for y in pd.unique(df.index.year.values):
-        for interv in pd.unique(df[df.index.year == y]['twrr_interval'].values):
-            df_total = df[(df.index.year == y) & (df.twrr_interval == interv)]['total']
-
-            #поставить обработку деления на ноль, при нулевой начальной сумме
-            #считаем доходность за год и период между пополнениями
-            df_year = pd.concat((df_year, pd.DataFrame({'year':[y], 'twrr_interval': [interv], 'yeld': [df_total[-1]/df_total[0]-1]})), ignore_index=True)
-
-    #Готовим данные для расчета доходности за год. Прибавляем 1 к значениям доходностей за интевал между пополнениями / изъятиями
-    df_year['yeld_1'] = 1 + df_year['yeld']
-
-
-
-
-    #шаг 2. готовим новый датафрейм, в котором расчитываем произведение (1 + доходность за период) за год. Получаем доходность за год + 1
-    df_year_yeld = df_year.groupby(['year']).yeld_1.prod().reset_index().rename(columns={'yeld_1':'yeld_to_year'})
-
-    #формируем столбец с доходностью по годам
-    df_year_yeld['yeld_to_year_%'] = (df_year_yeld['yeld_to_year'] - 1)*100
-
-    #шаг 3. расчитываем среднюю доходность за весь период владения, используя в качестве количества лет количество дней в датасете/365
-    t = int((df.index[-1]-df.index[0]).days)/365.
-    mean_yeld = (df_year_yeld['yeld_to_year'].prod() ** (1. / t) - 1) * 100.
-
-    # считаем общую доходность взвешенную по времени
-    total_return = (df_year['yeld_1'].prod() - 1) * 100
-
-
-
-
-    df_t = df_year_yeld[['year','yeld_to_year_%']]
-    df_t.set_index('year', inplace=True)
-
-    out = [total_return, mean_yeld, df_t]
-
-    return out
+    #формируем список кортежей денежного потока
+    cf = [(x, cashflows.loc[x]) for x in cashflows.index]
+    xirr = op.newton(lambda r: xnpv(r, cf), guess)
+    return xirr
 
 
 def twrr(df):
     """
     Расчет взвешенной по времени доходности, основанной на не равных периодах внесения и изъятия денег в формате DataFrame
 
+    !!!В последней строке положительный cashflow указывать не нужно!!!
 
     :param
-    *all_holdings: ежедневные значения стоимостей портфеля и отдельных бумаг
-    *cashflow: перечень внесений / изъятий деенжных средств с привязкой к дате
-    :return: единственное значение  взвешенной по времени доходности портфеля
+    *df - pandas dataframe с столбцами:
+    index: дата в формате numpy.datetime64
+    total: ежедневные значения стоимостей портфеля и отдельных бумаг
+    cashflow: перечень внесений / изъятий денежных средств с привязкой к дате
+    :return:
+    *total_return - доходность накопительным итогом за весь период
+    *twrr - взвешенная по времени среднегодовая доходность
+    *значения взвешенной по времени доходности на каждый период в входном датафрейме
     """
     #Формируем периоды между поступлениями / изъятиями денежных средств
     df['twrr_interval'] = np.cumsum(df['cashflow'] != 0) - 1
 
-    #считаем доходность внутри года по периодам
-    df['revenue'] = df.groupby([df.index.year, 'twrr_interval']).total.pct_change() + 1
-    df['revenue'].fillna(1, inplace = True)
 
-    df_revenue = df.groupby([df.index.year, 'twrr_interval']).revenue.prod().reset_index()
-    df_revenue.rename(columns = {df_revenue.columns[0]:'year'}, inplace=True)
+    #считаем доходность внутри года по периодам в разах
+    df['procent change'] = df.groupby([df.index.year, 'twrr_interval']).total.pct_change() + 1
+    df['procent change'].fillna(1, inplace = True)
 
+    #считаем доходность в процентах
+    df['revenue'] = np.cumprod(df['procent change'])-1
 
-    #Готовим данные для расчета средней доходности за год
-    df_year_revenue = pd.DataFrame(df_revenue.groupby(['year']).revenue.prod(), columns=['revenue'])
-    df_year_revenue['annual return'] = (df_year_revenue['revenue'] - 1)*100
-
-    #расчитываем среднюю годовую доходность за весь период владения, используя в качестве количества лет количество дней в датасете/365
-    t = int((df.index[-1]-df.index[0]).days)/365.
-    mean_revenue = (df_year_revenue.revenue.prod() ** (1. / t) - 1) * 100.
+    #считаем доходность по годам
+    df_year_revenue = df.groupby([df.index.year, 'twrr_interval'])[['procent change']].prod().reset_index()
 
     # считаем общую доходность взвешенную по времени
-    total_return = (df_revenue.revenue.prod() - 1)*100
+    total_return = (df['revenue'].iloc[-1])*100
 
-    return [total_return, mean_revenue, df_year_revenue['annual return']]
+    #расчитываем среднюю годовую взвешенную по времени доходность за весь период владения, используя в качестве количества лет количество дней в датасете/365
+    t = int((df.index[-1]-df.index[0]).days)/365.
+    twrr = ((df_year_revenue['procent change'].prod()) ** (1. / t) - 1) * 100.
+
+    return [total_return, twrr, df['revenue']*100]

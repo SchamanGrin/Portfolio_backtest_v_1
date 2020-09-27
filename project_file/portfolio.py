@@ -5,7 +5,7 @@ import pandas as pd
 from abc import ABCMeta, abstractmethod
 
 from event import FillEvent, OrderEvent
-from performance import create_sharpe_ratio, create_drawdowns, xirr, twrr
+from performance import create_sharpe_ratio, create_drawdowns, xirr, twrr, xirr_1
 
 class Portfolio(object):
     """
@@ -549,12 +549,14 @@ class NaivePortfolio_add_founds(Portfolio):
             self.cashflow.loc[self.equity_curve.index[-1], col] = self.equity_curve[col][-1]
         self.cashflow.fillna(0.0, inplace=True)
 
-        #Считаем внутреннюю норму доходности (взвещенную по денежной стоимости норму доходности)
-        xirr_total = xirr([(x, self.cashflow.loc[x]['total']) for x in self.cashflow.index])*100.0
+        #Считаем внутреннюю норму доходности (взвешенную по денежной стоимости норму доходности)
+        xirr_list = []
+        for col in list(self.cashflow):
+            xirr_list.append(xirr_1(self.cashflow[col])*100.0)
 
 
 
-        stats = [('XIRR', f'{xirr_total:.2f}%'),
+        stats = [('XIRR', f'{xirr_list:.2f}%'),
                  ('TWRR total return', f'{twrr_tr:.2f}%'),
                  ('TWRR mean', f'{twrr_mean:.2f}%'),
                  #проверить вывод на костыли

@@ -1,7 +1,6 @@
 import time
-
 import pandas as pd
-from performance import twrr, twrr_1
+from performance import twrr, xirr
 
 
 
@@ -15,18 +14,15 @@ data.reindex(pd.to_datetime(data.index, '%Y%m%d'))
 data_cashflow = pd.DataFrame(data.loc[data.index >= start_date]['close'][::-1])
 data_cashflow.loc[:,'cashflow'] = 0.*len(data_cashflow.index)
 data_cashflow['cashflow'][0]=-data_cashflow['close'][0]
-data_cashflow['cashflow'][-1]=data_cashflow['close'][-1]
 data_cashflow.rename(columns={'close':'total'}, inplace=True)
 
-#data_cashflow['year'] = data_cashflow.index.year
+#twrr = twrr(data_cashflow)
+xirr = xirr(data_cashflow)
 
-start_twrr_1 = time.time()
-result = twrr_1(data_cashflow)
-print(f'Время функции twrr_1: {time.time() - start_twrr_1:.2f}с')
+data_cashflow['cashflow'].iloc[-1]=data_cashflow['total'].iloc[-1]
+#добавить преобразование в список кортежей для xirr в
+xirr = xirr(data_cashflow)
+print(0)
 
-
-start_twrr = time.time()
-result = twrr(data_cashflow)
-print(f'Время функции twrr: {time.time() - start_twrr:.2f}с')
 
 
