@@ -543,6 +543,16 @@ class NaivePortfolio_add_founds(Portfolio):
 
 
         self.create_equity_curve_dataframe()
+        self.equity_curve['cashflow_total'] = self.cashflow['total']
+        self.equity_curve['cashflow_total'].fillna(0.0, inplace=True)
+        self.equity_curve['total_cash'] = self.equity_curve['total'] + self.equity_curve['cashflow_total']
+        df = []
+        for i in self.equity_curve.index[1:]:
+            x = [self.equity_curve['cashflow_total'].loc[:i]]
+            x = x[np.abs(x[:][1]) > 1E-10]
+            x += [self.equity_curve["total_cash"].loc[i]]
+            df += [xirr_1(pd.Series(x))]
+        self.equity_curve['xirr_total_cash'][1:] = df
 
         #добавляем итоговые значения к cashflow
         for col in list(self.cashflow):

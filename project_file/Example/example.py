@@ -1,6 +1,7 @@
 import time
 import pandas as pd
-from performance import twrr, xirr
+import numpy as np
+from performance import twrr, xirr, xirr_1
 
 
 
@@ -17,11 +18,19 @@ data_cashflow['cashflow'][0]=-data_cashflow['close'][0]
 data_cashflow.rename(columns={'close':'total'}, inplace=True)
 
 #twrr = twrr(data_cashflow)
-xirr = xirr(data_cashflow)
 
-data_cashflow['cashflow'].iloc[-1]=data_cashflow['total'].iloc[-1]
-#добавить преобразование в список кортежей для xirr в
-xirr = xirr(data_cashflow)
+data_cashflow.loc[data_cashflow.index[-1],'cashflow']=data_cashflow['total'][-1]
+xirr = xirr_1(data_cashflow[np.abs(data_cashflow['cashflow']) > 1e-10])
+
+data_cashflow['YEAR'] = pd.to_datetime(data_cashflow.index, format = '%Y')
+dfy = data_cashflow['YEAR'].unique()
+# dfs = dict(tuple(data_cashflow.groupby(data_cashflow['YEAR'].dt.year)))
+xirr_year = []
+for year in dfy:
+    data_year = data_cashflow[data_cashflow.index.year == year]
+
+    xirr_year += [data_cashflow[data_cashflow.index.year == year]]
+
 print(0)
 
 
