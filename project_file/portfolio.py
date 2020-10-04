@@ -547,12 +547,12 @@ class NaivePortfolio_add_founds(Portfolio):
         self.equity_curve['cashflow_total'].fillna(0.0, inplace=True)
         self.equity_curve['total_cash'] = self.equity_curve['total'] + self.equity_curve['cashflow_total']
 
+        #dx = self.equity_curve['cashflow_total'].copy()
         df = []
         for i in self.equity_curve.index[1:]:
             x = self.equity_curve['cashflow_total'].copy()
             x.loc[i] = self.equity_curve['total_cash'][i]
-            x = x[np.abs(x) > 1E-10]
-            df += [xirr_1(pd.Series(x))]
+            df += [xirr_1(pd.Series(x[np.abs(x) > 1E-10]))]
 
         self.equity_curve['xirr_total_cash'][1:] = df
 

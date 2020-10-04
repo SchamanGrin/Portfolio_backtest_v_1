@@ -69,7 +69,7 @@ def xnpv(rate, cashflows):
     chron_order = sorted(cashflows, key=lambda x: x[0])
     t0 = chron_order[0][0]  # t0 is the date of the first cash flow
 
-    return sum([cf / (1 + rate) ** ((t - t0).days / 365.0) for (t, cf) in chron_order])
+    return sum(cf / (1 + rate) ** ((t - t0).days / 365.0) for (t, cf) in chron_order)
 
 
 def xirr(cashflows, guess=0.1):
@@ -106,10 +106,8 @@ def xirr_1(cashflow, guess=0.1):
 
 
     #формируем список кортежей денежного потока
-    cf = [(x, cashflow.loc[x]) for x in cashflow.index]
-    xirr = op.newton(lambda r: xnpv(r, cf), guess)
+    return  op.newton(lambda r: xnpv(r, [(x, cashflow.loc[x]) for x in cashflow.index]), guess)
 
-    return xirr
 
 
 def twrr(df):
