@@ -102,11 +102,13 @@ def xirr(cashflows, guess=0.1):
     out = [xirr_total]
     return out
 
-def xirr_1(cashflows, guess=0.1):
+def xirr_1(cashflow, guess=0.1):
+
 
     #формируем список кортежей денежного потока
-    cf = [(x, cashflows.loc[x]) for x in cashflows.index]
+    cf = [(x, cashflow.loc[x]) for x in cashflow.index]
     xirr = op.newton(lambda r: xnpv(r, cf), guess)
+
     return xirr
 
 

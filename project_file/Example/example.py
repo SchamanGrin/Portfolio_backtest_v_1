@@ -16,20 +16,23 @@ data_cashflow = pd.DataFrame(data.loc[data.index >= start_date]['close'][::-1])
 data_cashflow.loc[:,'cashflow'] = 0.*len(data_cashflow.index)
 data_cashflow['cashflow'][0]=-data_cashflow['close'][0]
 data_cashflow.rename(columns={'close':'total'}, inplace=True)
+data_cashflow.loc[data_cashflow.index[-1], 'cashflow'] = data_cashflow['total'][-1]
 
-#twrr = twrr(data_cashflow)
 
-data_cashflow.loc[data_cashflow.index[-1],'cashflow']=data_cashflow['total'][-1]
-xirr = xirr_1(data_cashflow[np.abs(data_cashflow['cashflow']) > 1e-10])
+xirr = xirr_1(data_cashflow['cashflow'].loc[np.abs(data_cashflow['cashflow']) > 1E-10])*100
 
-data_cashflow['YEAR'] = pd.to_datetime(data_cashflow.index, format = '%Y')
-dfy = data_cashflow['YEAR'].unique()
-# dfs = dict(tuple(data_cashflow.groupby(data_cashflow['YEAR'].dt.year)))
-xirr_year = []
-for year in dfy:
-    data_year = data_cashflow[data_cashflow.index.year == year]
+data_xirr = []
+for i in data_cashflow.index[1:]:
+    df_xirr = data_cashflow['cashflow'].copy()
+    df_xirr.loc[i] += data_cashflow['total'][i]
+    data_xirr += [xirr_1(df_xirr.loc[np.abs(df_xirr) > 1E-10])]
 
-    xirr_year += [data_cashflow[data_cashflow.index.year == year]]
+print(xirr)
+#twrr_total, twrr, twrr_data = twrr(data_cashflow)
+
+
+
+
 
 print(0)
 
