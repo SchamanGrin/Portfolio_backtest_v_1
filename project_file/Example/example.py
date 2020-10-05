@@ -34,14 +34,14 @@ print(f'{time.time() - time_0_0:.2f} сек.')
 
 #print(xirr)
 #twrr_total, twrr, twrr_data = twrr(data_cashflow)
+'''
 
 time_1 = time.time()
 data_xirr_1 = []
 df_xirr_copy = data_cashflow['cashflow'].copy()
 df_x0 = df_xirr_copy[:1]
 for i in data_cashflow.index[1:]:
-    t = df_xirr_copy[df_xirr_copy.index == i]
-    df_x0.append(t)
+    df_x0 = df_x0.append(df_xirr_copy[df_xirr_copy.index == i])
     df_xirr = df_x0.copy()
     df_xirr[-1] += data_cashflow['total'][i]
     data_xirr_1 += [xirr_1(df_xirr.loc[np.abs(df_xirr) > 1E-10])]
@@ -49,7 +49,7 @@ for i in data_cashflow.index[1:]:
 print(f'{time.time() - time_1:.2f} сек.')
 
 print(sum(data_xirr_0[i] - data_xirr_1[i] for i in range(len(data_xirr_0))))
-'''
+
 
 df_xirr_func = data_cashflow['cashflow'].copy()
 
