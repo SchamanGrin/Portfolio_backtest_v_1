@@ -96,6 +96,8 @@ def xirr(cashflows, guess=0.1):
 
     return op.newton(lambda r: xnpv(r, cashflows), guess)
 
+
+
 def xirr_1(cashflow, guess=0.001):
 
 
