@@ -5,16 +5,20 @@ import scipy.optimize as op
 from performance import twrr, xirr, xirr_1
 
 
+guess=0.1
+
 def xnpv_np(rate, cashflows):
 
     #chron_order = np.sort(cashflows, lambda x: x[0])
-    t0 = np.datetime64(cashflows[0,1]) # t0 is the date of the first cash flow
-    t = np.array(cashflows[:,1], dtype = 'datetime64')
-
-    return  np.sum(cashflows[:,0]/ (1 + rate) ** (((t - t0)/ np.timedelta64(1, 'D'))/ 365.0))
+    #t0 = np.datetime64(cashflows[0,1]) # t0 is the date of the first cash flow
+    t0 = cashflows[0,1]
+    #t = np.array(cashflows[:,1], dtype = 'datetime64')
+    global guess
+    guess = rate
+    return  np.sum(cashflows[:,0]/ (1 + rate) ** ((np.sum(np.diff(cashflows[:,1]))/ np.timedelta64(1, 'D'))/ 365.0))
     #return sum(cf/ (1 + rate) ** ((t - t0).days / 365.0) for cf,t in cashflows)
 
-def xirr_np(cashflows, guess=0.1):
+def xirr_np(cashflows):
 
     return op.newton(lambda r: xnpv_np(r, cashflows), guess)
 
@@ -36,12 +40,12 @@ data_cashflow.rename(columns={'close':'total'}, inplace=True)
 
 '''
 #twrr_total, twrr, twrr_data = twrr(data_cashflow)
-'''
+
 
 #data_cashflow.loc[data_cashflow.index[-1], 'cashflow'] = data_cashflow['total'][-1]
 #print(data_cashflow)
 #xirr = xirr_1(data_cashflow['cashflow'].loc[np.abs(data_cashflow['cashflow']) > 1E-10])*100
-'''
+
 def func_dfxirr(dfxirr, x, i):
     dfxirr.loc[i] += x
     return dfxirr[np.abs(dfxirr) > 1E-10]
@@ -50,7 +54,7 @@ time_0_0 = time.time()
 df_xirr_copy = data_cashflow['cashflow'].copy()
 data_xirr_0 = [xirr_1(func_dfxirr(df_xirr_copy[:i].copy(), data_cashflow['total'][i], i)) \
                for i in data_cashflow.index[1:]]
-print(f'{time.time() - time_0_0:.2f} сек.')
+print(f'{len(data_xirr_0)} {time.time() - time_0_0:.2f} сек.')
 
 
 #print(xirr)
@@ -68,17 +72,20 @@ for i in data_cashflow.index[1:]:
     data_xirr_1 += [xirr_1(df_xirr.loc[np.abs(df_xirr) > 1E-10])]
 
 print(data_xirr_1)
-print(f'{time.time() - time_1:.2f} сек.')
+print(f'pandas {len(data_xirr_1)} {time.time() - time_1:.2f} сек.')
 
 #print(sum(data_xirr_0[i] - data_xirr_1[i] for i in range(len(data_xirr_0))))
 '''
+time_1 = time.time()
 df_t = data_cashflow.copy()
 df_t['date'] = data_cashflow.index
+df_t['date'] = df_t['date'].apply(lambda x: np.datetime64(x))
 arr_cashflow = df_t[['cashflow', 'date']].to_numpy()
 arr_total = df_t['total'].to_numpy()
 arr_xirr = []
 
-'''time_1 = time.time()
+'''
+time_1 = time.time()
 arr_xirr = []
 for i in range(1,len(arr_cashflow)):
     arr_cf = arr_cashflow[:i+1].copy()
@@ -86,33 +93,35 @@ for i in range(1,len(arr_cashflow)):
     arr_xirr += [xirr([(d,x) for x,d in arr_cf[np.abs(arr_cf[:, 0]) > 1E-10]])]
 
 
+
 print(f'{time.time() - time_1:.2f} сек')
 '''
-'''
+
 time_np = time.time()
 arr_xirr_np = []
 for i in range(1,len(arr_cashflow)):
     arr_cf = arr_cashflow[:i+1].copy()
-    arr_cf[i, 0] += data_cashflow['total'].iloc[i]
-    arr_xirr_np += [xirr_np(arr_cf[np.abs(arr_cf[:, 0]) > 1E-10])]
+    arr_cf[i, 0] += arr_total[i]
+    #arr_xirr_np += [xirr_np(arr_cf[np.abs(arr_cf[:, 0]) > 1E-10])]
+    arr_xirr_np += [xirr([(d,x) for x,d in arr_cf[np.abs(arr_cf[:, 0]) > 1E-10]])]
 
-print(f'{time.time() - time_np:.2f} сек')
+print(f'numpy {len(arr_xirr_np)} {time.time() - time_1:.2f} сек')
 
-print(np.allclose(arr_xirr, arr_xirr_np))
-'''
+
 t_v = time.time()
 arr_xirr_v = []
 def cf(i):
     arr_cf_f = arr_cashflow[:i+1].copy()
-    if len(arr_cf_f) > 1:
-        arr_cf_f[i, 0] += arr_total[i]
-        t = xirr([(d, x) for x, d in arr_cf_f[np.abs(arr_cf_f[:, 0]) > 1E-10]])
-    else:
-        t = 1
-    return t
-f = np.vectorize(cf)
-arr_xirr_v = f(range(len(arr_cashflow)))
-print(f'вектор {time.time() - t_v:.2f} сек.')
+    arr_cf_f[i, 0] += arr_total[i]
+   #t = xirr([(d, x) for x, d in arr_cf_f[np.abs(arr_cf_f[:, 0]) > 1E-10]])
+    return xirr_np(arr_cf_f[np.abs(arr_cf_f[:, 0]) > 1E-10])
+
+
+f = np.vectorize(cf, otypes=[np.float64])
+arr_xirr_v = np.append(arr_xirr_v, np.array(f(range(1,len(arr_cashflow)))))
+print(f'вектор {len(arr_xirr_v)} {time.time() - t_v:.2f} сек.')
+
+print(np.allclose(arr_xirr_np, arr_xirr_v))
 
 
 
