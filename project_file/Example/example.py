@@ -5,20 +5,18 @@ import scipy.optimize as op
 from performance import twrr, xirr, xirr_1
 
 
-guess=0.1
+#guess=0.1
 
 def xnpv_np(rate, cashflows):
 
-    #chron_order = np.sort(cashflows, lambda x: x[0])
-    #t0 = np.datetime64(cashflows[0,1]) # t0 is the date of the first cash flow
+
     t0 = cashflows[0,1]
-    #t = np.array(cashflows[:,1], dtype = 'datetime64')
-    global guess
-    guess = rate
-    return  np.sum(cashflows[:,0]/ (1 + rate) ** ((np.sum(np.diff(cashflows[:,1]))/ np.timedelta64(1, 'D'))/ 365.0))
+    #global guess
+    #guess = rate
+    return np.sum(cashflows[:,0]/ (1 + rate) ** ((np.sum(np.diff(cashflows[:,1]))/ np.timedelta64(1, 'D'))/ 365.0))
     #return sum(cf/ (1 + rate) ** ((t - t0).days / 365.0) for cf,t in cashflows)
 
-def xirr_np(cashflows):
+def xirr_np(cashflows, guess=0.1):
 
     return op.newton(lambda r: xnpv_np(r, cashflows), guess)
 
@@ -29,7 +27,7 @@ data = pd.read_csv(
 )
 #start_date = pd.to_datetime('2010-01-01')
 #data.reindex(pd.to_datetime(data.index, '%Y%m%d'))
-start_date = np.datetime64('2010-01-01')
+start_date = np.datetime64('2020-07-22')
 data.reindex(np.array(data.index, dtype='datetime64'))
 
 
@@ -79,7 +77,7 @@ print(f'pandas {len(data_xirr_1)} {time.time() - time_1:.2f} сек.')
 time_1 = time.time()
 df_t = data_cashflow.copy()
 df_t['date'] = data_cashflow.index
-df_t['date'] = df_t['date'].apply(lambda x: np.datetime64(x))
+df_t['date'] = df_t['date'].astype('datetime64[ns]')
 arr_cashflow = df_t[['cashflow', 'date']].to_numpy()
 arr_total = df_t['total'].to_numpy()
 arr_xirr = []
@@ -113,11 +111,13 @@ arr_xirr_v = []
 def cf(i):
     arr_cf_f = arr_cashflow[:i+1].copy()
     arr_cf_f[i, 0] += arr_total[i]
-   #t = xirr([(d, x) for x, d in arr_cf_f[np.abs(arr_cf_f[:, 0]) > 1E-10]])
-    return xirr_np(arr_cf_f[np.abs(arr_cf_f[:, 0]) > 1E-10])
+    t = xirr([(d, x) for x, d in arr_cf_f[np.abs(arr_cf_f[:, 0]) > 1E-10]])
+    return t#xirr_np(arr_cf_f[np.abs(arr_cf_f[:, 0]) > 1E-10])
 
 
 f = np.vectorize(cf, otypes=[np.float64])
+res = np.array(f(range(1,len(arr_cashflow))))
+res_0 = res[0]
 arr_xirr_v = np.append(arr_xirr_v, np.array(f(range(1,len(arr_cashflow)))))
 print(f'вектор {len(arr_xirr_v)} {time.time() - t_v:.2f} сек.')
 
