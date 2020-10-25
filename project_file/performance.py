@@ -73,7 +73,7 @@ def xnpv(rate, cashflows):
     return res #sum(cf / (1 + rate) ** ((t - t0).days / 365.0) for (t, cf) in chron_order)
 
 
-def xirr(cashflows, guess=0.1):
+def xirr(cashflows, guess=0.9):
     """
     Calculate the Internal Rate of Return of a series of cashflows at irregular intervals.
     Расчет внутренней нормы доходности при нерегулярных денежных потоках
@@ -94,8 +94,22 @@ def xirr(cashflows, guess=0.1):
     * This function is equivalent to the Microsoft Excel function of the same name.
     * For users that do not have the scipy module installed, there is an alternate version (commented out) that uses the secant_method function defined in the module rather than the scipy.optimize module's numerical solver. Both use the same method of calculation so there should be no difference in performance, but the secant_method function does not fail gracefully in cases where there is no solution, so the scipy.optimize.newton version is preferred.
     """
-
+    s = np.sum(cashflows[:][1])
+    if s == 0:
+        return 0
+    elif s < 0:
+        guess *= -1
     return op.newton(lambda r: xnpv(r, cashflows), guess)
+
+
+    try:
+        return op.newton(lambda r: xnpv(r, cashflows), guess)
+    except:
+        return op.newton(lambda r: xnpv(r, cashflows), -guess)
+        t0 = cashflows[0][0]
+        delta = (np.timedelta64(1, 'D') * 365)
+        q = [np.timedelta64((t[0] - t0), "D") for t in cashflows] / delta
+        return 1
 
 
 
