@@ -8,13 +8,13 @@ from performance import twrr, xirr, xirr_1
 #guess=0.1
 
 
-def xnpv_np_prime(rate, cashflows, q):
+def xnpv_np_prime(rate, cashflows):
     #t0 = cashflows[0,1]
-    # q = np.sum(np.diff(cashflows[:, 1])) / np.timedelta64(1, 'D') / 365.0
-    return -q * np.sum(cashflows) / (1 + rate) ** (q + 1)
+    q = np.sum(np.diff(cashflows[:, 1])) / np.timedelta64(1, 'D') / 365.0
+    return -(q * np.sum(cashflows)) / (1 + rate) ** (q + 1)
 
 
-def xnpv_np(rate, cashflows, q):
+def xnpv_np(rate, cashflows):
 
 
     #t0 = cashflows[0,1]
@@ -23,21 +23,22 @@ def xnpv_np(rate, cashflows, q):
 
     # q = np.sum(np.diff(cashflows[:, 1]) / np.timedelta64(1, 'D') / 365.0
     #q = np.sum((cashflows[:, 1] - t0) / np.timedelta64(1, 'D')) / 365.0
-    # return np.sum(cashflows[:, 0] / (1 + rate) ** ((np.sum(np.diff(cashflows[:, 1])) / np.timedelta64(1, 'D'))/ 365.0))
+    t =  np.sum(cashflows[:, 0] / (1 + rate) ** ((np.sum(np.diff(cashflows[:, 1])) / np.timedelta64(1, 'D'))/ 365.0))
     # return sum(cf/ (1 + rate) ** ((t - t0).days / 365.0) for cf,t in cashflows)
     # return q * np.sum(cashflows[:, 0]) / (1 + rate) ** (q + 1)
-    return np.sum(cashflows) / (1 + rate) ** q
+    return t # np.sum(cashflows) / (1 + rate) ** q
 
 def xirr_np(cashflows, guess=0.1):
-    q = np.sum(np.diff(cashflows[:, 1])) / np.timedelta64(1, 'D') / 365
+    #q = np.sum(np.diff(cashflows[:, 1])) / np.timedelta64(1, 'D') / 365
     #try:
     # return op.fsolve(lambda r: xnpv_np(r, cashflows[:, 0], q), x0=guess, \
     #                  fprime=lambda r: xnpv_np_prime(r, cashflows[:, 0], q), xtol=1e-7)[0]
     #except:
-        # try:
-    return op.newton(lambda r: xnpv_np(r, cashflows, q), guess, tol=1e-7, fprime=lambda r: xnpv_np_prime(r, cashflows, q))
-        # except:
-        #     return op.root(lambda r: xnpv_np(r, cashflows), guess, tol=1e-7).x[0]
+    try:
+        return op.newton(lambda r: xnpv_np(r, cashflows), guess) #, fprime=lambda r: xnpv_np_prime(r, cashflows))
+    except:
+        t = op.root(lambda r: xnpv_np(r, cashflows), x0=guess).x[0]
+        return t #op.root(lambda r: xnpv_np(r, cashflows), tol=1e-7, x0=guess).x[0]
         #t = op.root(lambda r: xnpv_np(r, cashflows), guess, tol=1e-7,  method='df-sane')
 
 
@@ -47,7 +48,7 @@ data = pd.read_csv(
 )
 #start_date = pd.to_datetime('2010-01-01')
 #data.reindex(pd.to_datetime(data.index, '%Y%m%d'))
-start_date = np.datetime64('2020-06-03')
+start_date = np.datetime64('2020-01-03')
 data.reindex(np.array(data.index, dtype='datetime64'))
 
 
@@ -100,9 +101,10 @@ df_t['date'] = data_cashflow.index
 df_t['date'] = df_t['date'].astype('datetime64[ns]')
 arr_cashflow = df_t[['cashflow', 'date']].to_numpy()
 arr_total = df_t['total'].to_numpy()
-arr_xirr = []
 
-'''
+
+
+arr_xirr = []
 time_1 = time.time()
 arr_xirr = []
 for i in range(1,len(arr_cashflow)):
@@ -112,9 +114,9 @@ for i in range(1,len(arr_cashflow)):
 
 
 
-print(f'{time.time() - time_1:.2f} сек')
+print(f'вектор с изначальной xirr {time.time() - time_1:.2f} сек')
 
-
+'''
 time_np = time.time()
 arr_xirr_np = []
 for i in range(1,len(arr_cashflow)):
@@ -132,16 +134,17 @@ def cf(i):
     arr_cf_f = arr_cashflow[:i+1].copy()
     arr_cf_f[i, 0] += arr_total[i]
     #t = xirr([(d, x) for x, d in arr_cf_f[np.abs(arr_cf_f[:, 0]) > 1E-10]])
-    return xirr_np(arr_cf_f[np.abs(arr_cf_f[:, 0]) > 1E-10])
+    t = xirr_np(arr_cf_f[np.abs(arr_cf_f[:, 0]) > 1E-10])
+    return t #xirr_np(arr_cf_f[np.abs(arr_cf_f[:, 0]) > 1E-10])
 
 
 f = np.vectorize(cf, otypes=[np.float64])
 res = np.array(f(range(1,len(arr_cashflow))))
-res_0 = res[0]
-arr_xirr_v = np.append(arr_xirr_v, np.array(f(range(1,len(arr_cashflow)))))
+
+
 print(f'вектор {len(arr_xirr_v)} {time.time() - t_v:.2f} сек.')
 
-#print(np.allclose(arr_xirr_np, arr_xirr_v))
+print(np.allclose(arr_xirr, arr_xirr_v))
 
 
 
