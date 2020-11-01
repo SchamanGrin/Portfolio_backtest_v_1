@@ -4,23 +4,38 @@ import pandas as pd
 import scipy.optimize as op
 from performance import twrr, xirr, xirr_1, xnpv
 
-
+'''
 def xnpv_np(rate, cashflows):
 
     t0 = cashflows[0,1]
     delta = np.timedelta64(1, 'D') * 365
     t = 0
     t_list = []
+    if rate <= -1:
+        return -1
+    if rate == 0:
+        return sum(cashflows[:, 0])
+
     for i in range(len(cashflows)):
-        st = np.timedelta64((cashflows[i, 1]-t0), "D")/delta
-        temp = cashflows[i, 0] / (1 + rate) ** (np.timedelta64((cashflows[i, 1]-t0), "D")/delta)
+        st = np.timedelta64((cashflows[i, 1] - t0), "D") / delta
+        temp = cashflows[i, 0] / (1 + rate) ** st
         t += temp
         t_list += [temp]
     #t = np.sum([cf/ (1 + rate) ** (np.timedelta64((t-t0), "D")/delta) for cf, t in cashflows])
     return t
+'''
 
+def xnpv(rate, cashflows):
 
-def xirr_np(cashflows, guess=0.9):
+    t0 = cashflows[0,1]
+    if rate <= -1:
+        return -1
+    if rate == 0:
+        return sum(cashflows[:, 0])
+
+    return np.sum([cf/ (1 + rate) ** (np.timedelta64((t-t0), "D")/(np.timedelta64(1, 'D') * 365)) for cf, t in cashflows])
+
+def xirr(cashflows, guess=0.1):
 
     s = np.sum(cashflows[:,0])
     if s == 0:
@@ -28,20 +43,43 @@ def xirr_np(cashflows, guess=0.9):
     elif s < 0:
         guess *= -1
 
-    return op.newton(lambda r: xnpv_np(r, cashflows), x0=guess)
+    return op.newton(lambda r: xnpv(r, cashflows), tol=1E-4, x0=guess)
 
-def xirr_np_bounds(cashflows, guess=0.9):
+def xirr_np_bounds(cashflows, guess=0.1):
     # при отрицательном s r не может бытыть меньше -1, нужно ввести ограничения.
 
     s = np.sum(cashflows[:,0])
-    bound = np.inf
+
     if s == 0:
         return 0
     elif s < 0:
         guess *= -1
-        bound = -1
-    bounds = op.Bounds((0), (bound))
-    return op.minimize(lambda r: xnpv_np(r, cashflows), x0=guess, bounds=bounds)
+
+    try:
+        r_op = op.newton(lambda r: xnpv_np(r, cashflows), tol=1E-4, x0=guess)
+        if isinstance(r_op, float):
+            pass
+            # return r_op
+        else:
+            r_op = r_op[0]
+        bounds = None
+        if s < 0:
+            if r_op > 0:
+                bounds = op.Bounds(-1.0, 0.0)
+        else:
+            if r_op < 0:
+                bounds = op.Bounds(0.0, np.inf)
+        if bounds:
+            r_op = op.minimize(lambda r: xnpv_np(r, cashflows), x0=guess, tol=1E-3, bounds=bounds, method="trust-constr")
+            r_op = r_op.x[0]
+        return r_op
+    except:
+        if s < 0:
+            bounds = op.Bounds(-1.0, 0.0)
+        else:
+            bounds = op.Bounds(0.0, np.inf)
+        r_op = op.minimize(lambda r: xnpv_np(r, cashflows), x0=guess, tol=1E-5, bounds=bounds, method="trust-constr")
+        return r_op.x[0]
 
 
 
@@ -99,18 +137,24 @@ for i in range(1,len(arr_cashflow)):
 
 
 print(f'вектор с изначальной xirr {time.time() - time_1:.2f} сек')
-
-
 '''
+
+
 time_np = time.time()
 arr_xirr_np = []
+arr_xirr = []
 for i in range(1,len(arr_cashflow)):
     arr_cf = arr_cashflow[:i+1].copy()
     arr_cf[i, 0] += arr_total[i]
     arr_xirr_np += [xirr_np_bounds(arr_cf[np.abs(arr_cf[:, 0]) > 1E-10])]
-    #arr_xirr_np += [xirr([(d,x) for x,d in arr_cf[np.abs(arr_cf[:, 0]) > 1E-10]])]
+    arr_xirr += [xirr_np(arr_cf[np.abs(arr_cf[:, 0]) > 1E-10])]
 
-print(f'numpy {len(arr_xirr_np)} {time.time() - time_1:.2f} сек')
+#print(f'numpy {len(arr_xirr_np)} {time.time() - time_1:.2f} сек')
+#df_t['xirr'] = np.concatenate([[0],arr_xirr_np])
+#print(df_t)
+print(np.allclose(arr_xirr_np, arr_xirr))
+
+
 
 '''
 t_v = time.time()
