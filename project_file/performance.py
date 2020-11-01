@@ -102,16 +102,6 @@ def xirr(cashflows, guess=0.9):
     return op.newton(lambda r: xnpv(r, cashflows), guess)
 
 
-    try:
-        return op.newton(lambda r: xnpv(r, cashflows), guess)
-    except:
-        return op.newton(lambda r: xnpv(r, cashflows), -guess)
-        t0 = cashflows[0][0]
-        delta = (np.timedelta64(1, 'D') * 365)
-        q = [np.timedelta64((t[0] - t0), "D") for t in cashflows] / delta
-        return 1
-
-
 
 def xirr_1(cashflow, guess=0.001):
 

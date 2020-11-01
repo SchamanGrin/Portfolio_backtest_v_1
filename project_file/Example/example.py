@@ -2,26 +2,46 @@ import time
 import numpy as np
 import pandas as pd
 import scipy.optimize as op
-from performance import twrr, xirr, xirr_1
+from performance import twrr, xirr, xirr_1, xnpv
 
 
-def xnpv_np(rate, cashflows, q):
+def xnpv_np(rate, cashflows):
 
-
-    t =  np.sum(cashflows[:, 0] / (1 + rate) ** ((np.sum(np.diff(cashflows[:, 1])) / np.timedelta64(1, 'D'))/ 365.0))
+    t0 = cashflows[0,1]
+    delta = np.timedelta64(1, 'D') * 365
+    t = 0
+    t_list = []
+    for i in range(len(cashflows)):
+        st = np.timedelta64((cashflows[i, 1]-t0), "D")/delta
+        temp = cashflows[i, 0] / (1 + rate) ** (np.timedelta64((cashflows[i, 1]-t0), "D")/delta)
+        t += temp
+        t_list += [temp]
+    #t = np.sum([cf/ (1 + rate) ** (np.timedelta64((t-t0), "D")/delta) for cf, t in cashflows])
     return t
 
 
+def xirr_np(cashflows, guess=0.9):
 
-    return t
+    s = np.sum(cashflows[:,0])
+    if s == 0:
+        return 0
+    elif s < 0:
+        guess *= -1
 
-    """sum(cf / (1 + rate) ** ((t - t0).days / 365.0) for (t, cf) in chron_order)"""
+    return op.newton(lambda r: xnpv_np(r, cashflows), x0=guess)
 
-def xirr_np(cashflows):
+def xirr_np_bounds(cashflows, guess=0.9):
+    # при отрицательном s r не может бытыть меньше -1, нужно ввести ограничения.
 
-
-
-    return op.newton(lambda r: xnpv_np(r, cashflows[:, 0], q), x0=guess) #, \
+    s = np.sum(cashflows[:,0])
+    bound = np.inf
+    if s == 0:
+        return 0
+    elif s < 0:
+        guess *= -1
+        bound = -1
+    bounds = op.Bounds((0), (bound))
+    return op.minimize(lambda r: xnpv_np(r, cashflows), x0=guess, bounds=bounds)
 
 
 
@@ -31,7 +51,7 @@ data = pd.read_csv(
 )
 #start_date = pd.to_datetime('2010-01-01')
 #data.reindex(pd.to_datetime(data.index, '%Y%m%d'))
-start_date = np.datetime64('2020-01-03')
+start_date = np.datetime64('2010-01-01')
 data.reindex(np.array(data.index, dtype='datetime64'))
 
 
@@ -42,25 +62,6 @@ data_cashflow.rename(columns={'close':'total'}, inplace=True)
 
 '''
 #twrr_total, twrr, twrr_data = twrr(data_cashflow)
-
-
-#data_cashflow.loc[data_cashflow.index[-1], 'cashflow'] = data_cashflow['total'][-1]
-#print(data_cashflow)
-#xirr = xirr_1(data_cashflow['cashflow'].loc[np.abs(data_cashflow['cashflow']) > 1E-10])*100
-
-def func_dfxirr(dfxirr, x, i):
-    dfxirr.loc[i] += x
-    return dfxirr[np.abs(dfxirr) > 1E-10]
-
-time_0_0 = time.time()
-df_xirr_copy = data_cashflow['cashflow'].copy()
-data_xirr_0 = [xirr_1(func_dfxirr(df_xirr_copy[:i].copy(), data_cashflow['total'][i], i)) \
-               for i in data_cashflow.index[1:]]
-print(f'{len(data_xirr_0)} {time.time() - time_0_0:.2f} сек.')
-
-
-#print(xirr)
-
 
 
 time_1 = time.time()
@@ -86,7 +87,7 @@ arr_cashflow = df_t[['cashflow', 'date']].to_numpy()
 arr_total = df_t['total'].to_numpy()
 
 
-
+'''
 arr_xirr = []
 time_1 = time.time()
 arr_xirr = []
@@ -106,12 +107,12 @@ arr_xirr_np = []
 for i in range(1,len(arr_cashflow)):
     arr_cf = arr_cashflow[:i+1].copy()
     arr_cf[i, 0] += arr_total[i]
-    #arr_xirr_np += [xirr_np(arr_cf[np.abs(arr_cf[:, 0]) > 1E-10])]
-    arr_xirr_np += [xirr([(d,x) for x,d in arr_cf[np.abs(arr_cf[:, 0]) > 1E-10]])]
+    arr_xirr_np += [xirr_np_bounds(arr_cf[np.abs(arr_cf[:, 0]) > 1E-10])]
+    #arr_xirr_np += [xirr([(d,x) for x,d in arr_cf[np.abs(arr_cf[:, 0]) > 1E-10]])]
 
 print(f'numpy {len(arr_xirr_np)} {time.time() - time_1:.2f} сек')
 
-
+'''
 t_v = time.time()
 arr_xirr_v = []
 def cf(i):
