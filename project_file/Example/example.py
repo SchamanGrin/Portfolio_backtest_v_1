@@ -2,7 +2,7 @@ import time
 import numpy as np
 import pandas as pd
 import scipy.optimize as op
-from performance import twrr, xirr, xirr_1, xnpv
+from performance import twrr, xirr, xnpv
 
 '''
 def xnpv_np(rate, cashflows):
@@ -24,10 +24,25 @@ def xnpv_np(rate, cashflows):
     #t = np.sum([cf/ (1 + rate) ** (np.timedelta64((t-t0), "D")/delta) for cf, t in cashflows])
     return t
 '''
-
-def xnpv(rate, cashflows):
+def xnpv_1(rate, cashflows):
 
     t0 = cashflows[0,1]
+
+    return np.sum([cf/ (1 + rate) ** (np.timedelta64((t-t0), "D")/(np.timedelta64(1, 'D') * 365)) for cf, t in cashflows])
+
+def xirr_1(cashflows, guess=0.1):
+
+    try:
+        return op.newton(lambda r: xnpv_1(r, cashflows), tol=1E-4, x0=guess)
+    except:
+        return op.minimize(lambda r: xnpv_1(r, cashflows), x0=guess, tol=1E-5, bounds=op.Bounds(-1.0, 0.0), method="trust-constr").x[0]
+
+
+
+
+def xnpv_np(rate, cashflows):
+
+    t0 = cashflows[0,0]
     if rate <= -1:
         return -1
     if rate == 0:
@@ -35,15 +50,17 @@ def xnpv(rate, cashflows):
 
     return np.sum([cf/ (1 + rate) ** (np.timedelta64((t-t0), "D")/(np.timedelta64(1, 'D') * 365)) for cf, t in cashflows])
 
-def xirr(cashflows, guess=0.1):
+def xirr_np(cashflows, guess=0.1):
 
-    s = np.sum(cashflows[:,0])
+    s = np.sum(cashflows[:,1])
     if s == 0:
         return 0
     elif s < 0:
         guess *= -1
-
-    return op.newton(lambda r: xnpv(r, cashflows), tol=1E-4, x0=guess)
+    try:
+        return op.newton(lambda r: xnpv_np(r, cashflows), tol=1E-4, x0=guess)
+    except:
+        return op.minimize(lambda r: xnpv_np(r, cashflows), x0=guess, tol=1E-5, bounds=op.Bounds(-1.0, 0.0), method="trust-constr").x[0]
 
 def xirr_np_bounds(cashflows, guess=0.1):
     # при отрицательном s r не может бытыть меньше -1, нужно ввести ограничения.
@@ -146,12 +163,11 @@ arr_xirr = []
 for i in range(1,len(arr_cashflow)):
     arr_cf = arr_cashflow[:i+1].copy()
     arr_cf[i, 0] += arr_total[i]
-    arr_xirr_np += [xirr_np_bounds(arr_cf[np.abs(arr_cf[:, 0]) > 1E-10])]
+    arr_xirr_np += [xirr_1(arr_cf[np.abs(arr_cf[:, 0]) > 1E-10])]
     arr_xirr += [xirr_np(arr_cf[np.abs(arr_cf[:, 0]) > 1E-10])]
 
-#print(f'numpy {len(arr_xirr_np)} {time.time() - time_1:.2f} сек')
+#print(f' расчет с exeption {len(arr_xirr)} {time.time() - time_1:.2f} сек')
 #df_t['xirr'] = np.concatenate([[0],arr_xirr_np])
-#print(df_t)
 print(np.allclose(arr_xirr_np, arr_xirr))
 
 
