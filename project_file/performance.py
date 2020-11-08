@@ -105,7 +105,11 @@ def xirr(cashflows, guess=0.1):
     elif s < 0:
         guess *= -1
 
-    return op.newton(lambda r: xnpv(r, cashflows), guess)
+    try:
+        return op.newton(lambda r: xnpv(r, cashflows), guess)
+    except:
+        return op.minimize(lambda r: xnpv(r, cashflows), x0=guess, tol=1E-5, bounds=op.Bounds(-1.0, 0.0),
+                    method="trust-constr").x[0]
 
 def twrr(cf):
     """
@@ -234,7 +238,6 @@ def create_return(cashflows, method = ['twrr', 'mwrr'], period = 'day'):
         return [twrr, cf['revenue']]
 
     result = {}
-
     if 'twrr' in method:
         twrr, data  = twrr(cashflows)
         result['twrr'] = {'return': twrr, 'data':data}
