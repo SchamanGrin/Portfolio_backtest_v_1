@@ -245,11 +245,12 @@ def create_return(cashflows, method = ['twrr', 'mwrr'], period = 'day'):
 
         arr_res = []
         # для каждого значения стоимости портфеля, считаем mwrr
-        for i in range(1,len(cf_np)):
+        for i in range(1, len(cf_np)):
             arr_cf = cf_np[:i+1].copy()
             #прибавляем положительный итоговый денежный поток на дату, равный стоимости портфеля
-            arr_cf[i,1] = +cashflows[cashflows.columns[0]][i]
-            arr_res += [xirr(arr_cf[np.abs(arr_cf[:,1]) > 1e-10])]
+            arr_cf[i, 1] += cashflows[cashflows.columns[0]][i]
+            arr_res += [xirr(arr_cf[np.abs(arr_cf[:, 1]) > 1e-10])]
+
         result['mwrr'] = {'return': arr_res[-1], 'data': pd.DataFrame(arr_res, index=arr_res[0], columns=['revenue'])}
 
     return result
