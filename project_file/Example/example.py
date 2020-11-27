@@ -27,36 +27,32 @@ def twrr(cf):
     # Формируем периоды расчета изменения стоимости портфеля между пополнениями / изъятиями
     # Формируем столбец с накопительным количеством строк с не нулевым cashflow и смещаем на один, что бы в интервал
     # попадала строка с следующим casflow для расчета общей стоимоти до изменения
-    """ cf['interval'] = np.cumsum(cf[cf.columns[1]] != 0)
-    cf['interval'] = cf['interval'].shift(1)"""
 
     cf.loc[:,'interval'] = np.cumsum(cf[cf.columns[1]] != 0).shift(1)
 
-
-    """cf['change'] = (cf['total'] + cf['cashflow']) / cf['total'].shift(periods=1)
-    cf['change'].fillna(1, inplace=True)"""
 
     # Формируем столбец с расчетом изменения общей стоимости портфеля за каждый период по сравнению
     # с стоимостью в предыдущим периодом убирая из расчета cashflow за текущий период.
     cf['change'] = ((cf['total'] + cf['cashflow']) / cf['total'].shift(periods=1)).fillna(1)
 
-    """cf['prod_interval'] = cf.groupby('interval').change.cumprod()
-    cf['prod_interval'].fillna(1, inplace=True)"""
 
     # Для каждой строки считаем накопительное произведение изменение общей стоимости портфеля в рамках периода
     cf['prod_interval'] = cf.groupby('interval').change.cumprod().fillna(1)
 
+    # Готовим вспомогательный столбец для хранения полного изменения по каждому периоду
     cf['prod_previous_period'] = cf['prod_interval'][cf['cashflow'] != 0]
     cf['prod_previous_period'].fillna(1, inplace=True)
+
+    # Расчитываем накопленную доходность умножая изменение за текущий период на общие изменения за прошлые периоды
     cf['revenue'] = cf.prod_previous_period.cumprod()
 
-
+    # Рассчитываем годовую доходность, умножая на приведенный к году текущий срок с даты старта портфеля
     cf['revenue'][cf['cashflow'] == 0 ] = cf.revenue * cf.prod_interval
 
 
     cf['annual return'] = cf.revenue**(365./(cf.index - start_date).days) - 1
 
-    return [cf['revenue'][-1], cf['revenue', 'annual return']]
+    return [cf['annual return'][-1], cf['revenue', 'annual return']]
 
 
 
@@ -69,7 +65,8 @@ data = pd.read_csv(
 start_date = np.datetime64('2010-01-01')
 end_date = np.datetime64('2010-01-30')
 data.reindex(np.array(data.index, dtype='datetime64'))
-date = ['2010-01-04', '2010-01-08','2010-01-15', '2010-01-29']
+date = np.array(['2010-01-04', '2010-01-08','2010-01-15', '2010-01-29'], dtype='datetime64')
+
 count = [10,10,-10,-10]
 
 data_cashflow = pd.DataFrame(data.loc[end_date:start_date, 'close'][::-1])
