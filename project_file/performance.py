@@ -2,6 +2,9 @@
 
 import numpy as np
 import pandas as pd
+# global PERIOD_PER_DAYS
+# PERIOD_PER_DAYS = (np.timedelta64(1, 'D') * 365)
+PERIOD_PER_DAYS = 365.0
 
 from scipy import optimize as op
 
@@ -26,7 +29,6 @@ def create_drawdowns(equity_curve):
     Прибыль:
     drawdown, duration - Наибольшая просадка и ее длительность
     """
-
     # Подсчет общей прибыли
     # и установка High Water Mark
     # Затем создаются серии для просадки и длительности
@@ -65,14 +67,20 @@ def xnpv(rate, cashflows):
     * This function is equivalent to the Microsoft Excel function of the same name.
     Эта функция соответсвует Excel функции с таким же наименованием
     """
-
+    global PERIOD_PER_DAYS
     t0 = cashflows[0, 0]
+
+    if rate == -1.0:
+        return np.inf
+    r = 1 + rate
+
     if rate <= -1:
-        return -1
+        r = -r
+        return sum([-abs(cf) / r**((t - t0).days / PERIOD_PER_DAYS) for t, cf in cashflows])
     if rate == 0:
         return sum(cashflows[:, 1])
 
-    return np.sum([cf / (1 + rate) ** (np.timedelta64((t - t0), "D") / (np.timedelta64(1, 'D') * 365)) for t, cf in cashflows])
+    return sum([cf / r**((t - t0).days / PERIOD_PER_DAYS) for t, cf in cashflows])
 
 
 def xirr(cashflows, guess=0.1):
@@ -106,10 +114,15 @@ def xirr(cashflows, guess=0.1):
         guess *= -1
 
     try:
-        return op.newton(lambda r: xnpv(r, cashflows), guess, maxiter=100)
+        result = op.newton(lambda r: xnpv(r, cashflows), guess, maxiter=100)
     except:
-        return op.minimize(lambda r: xnpv(r, cashflows), x0=guess, tol=1E-5, bounds=op.Bounds(-1.0, 0.0),
-                    method="trust-constr").x[0]
+        result = op.brentq(lambda r: xnpv(r, cashflows), -0.999999999999999, 1e20, maxiter=10**6)
+
+    if not isinstance(result, complex):
+        return result
+    else:
+        return None
+
 
 def twrr(cf):
     """
@@ -178,23 +191,32 @@ def create_return(cashflows, method = ['twrr', 'mwrr']):
 
         t0 = cashflows[0,0]
         if rate <= -1:
-            return -1
+            return sum([-abs(cf)/ (-1 - rate) ** (np.timedelta64((t-t0), "D")/(np.timedelta64(1, 'D') * 365)) for t, cf in cashflows])
         if rate == 0:
             return sum(cashflows[:, 1])
 
-        return np.sum([cf/ (1 + rate) ** (np.timedelta64((t-t0), "D")/(np.timedelta64(1, 'D') * 365)) for t, cf in cashflows])
+        return sum([cf/ (1 + rate) ** (np.timedelta64((t-t0), "D")/(np.timedelta64(1, 'D') * 365)) for t, cf in cashflows])
 
     def xirr(cashflows, guess=0.1):
 
-        s = np.sum(cashflows[:, 1])
-        if s == 0:
-            return 0
-        elif s < 0:
-            guess *= -1
+        if all(v >= 0 for v in cashflows[:,1]):
+            return float("inf")
+        if all(v <= 0 for v in cashflows[:,1]):
+            return -float("inf")
+
+        result = None
+
         try:
-            return op.newton(lambda r: xnpv(r, cashflows), tol=1E-4, x0=guess)
+            result = op.newton(lambda r: xnpv(r, cashflows), tol=1E-4, x0=guess)
         except:
-            return op.minimize.brentq(lambda r: xnpv(r, cashflows), -0.999999999999999, 1e20, maxiter=10**6)
+            result = op.brentq(lambda r: xnpv(r, cashflows), -0.999999999999999, 1e20, maxiter=10**6)
+
+        if not isinstance(result, complex):
+            return result
+        else:
+            return None
+
+
 
     def twrr(cf):
         """
