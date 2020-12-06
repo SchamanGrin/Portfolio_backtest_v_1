@@ -2,21 +2,23 @@ import time
 import numpy as np
 import pandas as pd
 import scipy.optimize as op
-from performance import twrr, xirr, xnpv
+from performance import create_return
 
 def twrr(cf):
     """
-    Расчет взвешенной по времени доходности, основанной на не равных периодах внесения и изъятия денег в формате DataFrame
+    Расчет взвешенной по времени доходности, при неравномерных на не равномерных периодах внесения и изъятия денег в формате DataFrame
 
-    !!!В последней строке положительный cashflow указывать не нужно!!!
 
     :param cashflows: pandas DataFrame с столбцами ['total', 'cashflow'], имя столбца не важно, важна последовательность.
      index - дата в формает timestamp или datetime64, в которую был произведегн денежный поток и определена стоимость портфеля
      total - стоимость портфеля на соответствующую дату в формате float
      cashflow - размер денежного потока на соответствующую дату в формате float
 
-    :return:
-    *twrr - взвешенная по времени среднегодовая доходность
+     каждая строка равна дневным значениям.
+
+    :return: [twrr, annual return, revenue]
+    *twrr - взвешенная по времени среднегодовая доходность за весь период. формат: float
+    *annual return - годовая доходность на каждый день
     *total_return - доходность накопительным итогом за весь период
     *
     *значения взвешенной по времени доходности на каждый период в входном датафрейме
@@ -52,7 +54,7 @@ def twrr(cf):
 
     cf['annual return'] = cf.revenue**(365./(cf.index - start_date).days) - 1
 
-    return [cf['annual return'][-1], cf['revenue', 'annual return']]
+    return [cf['annual return'][-1], cf['annual return'], cf['revenue']]
 
 
 
@@ -76,7 +78,7 @@ data_cashflow.fillna(0, inplace=True)
 data_cashflow['total'] = np.cumsum(data_cashflow['count'])*data_cashflow['close']
 
 
-twrr_total = twrr(data_cashflow[['total', 'cashflow']])
+result = create_return(data_cashflow[['total', 'cashflow']], ['twrr', 'mwrr'])
 print()
 
 

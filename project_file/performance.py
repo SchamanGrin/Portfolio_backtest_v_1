@@ -106,7 +106,7 @@ def xirr(cashflows, guess=0.1):
         guess *= -1
 
     try:
-        return op.newton(lambda r: xnpv(r, cashflows), guess)
+        return op.newton(lambda r: xnpv(r, cashflows), guess, maxiter=100)
     except:
         return op.minimize(lambda r: xnpv(r, cashflows), x0=guess, tol=1E-5, bounds=op.Bounds(-1.0, 0.0),
                     method="trust-constr").x[0]
@@ -148,13 +148,13 @@ def twrr(cf):
 
 
 
-def create_return(cashflows, method = ['twrr', 'mwrr'], period = 'day'):
+def create_return(cashflows, method = ['twrr', 'mwrr']):
     """
-    Метод расчитывает доходность портфеля с учетом пополнений и ихъятий денежных средств портфеля.
-    Расчет производится на основе DataFrame с данными о стоимости портфеля и денежного потока
+    Метод расчитывает доходность портфеля с учетом пополнений и изъятий денежных средств портфеля.
+    Расчет производится на основе DataFrame с ежедневными данными о стоимости портфеля и денежного потока
     на дату. Для расчета используется два метода:
-    - взвещенный по деньгам (money-weighted return)
-    - взвещенный по времени (time-weighted return)
+    - взвешенный по деньгам (money-weighted return)
+    - взвешенный по времени (time-weighted return)
 
 
     :param cashflows: pandas DataFrame с столбцами ['total', 'cashflow'], имя столбца не важно, важна последовательность.
@@ -169,10 +169,6 @@ def create_return(cashflows, method = ['twrr', 'mwrr'], period = 'day'):
      ['twrr']
      ['twrr', 'mwrr']
      ['mwrr']
-
-    :param period: периодичность данных в DataFrame, определеяет, какие промежутки времени   может принимать значения:
-    'minute', 'hour', 'day', 'month', 'year'
-
 
     :return: словарь {'twrr';{'return': float, 'data': DataFrame}, 'mwrr':{'return': float, 'data': DataFrame}}
      return - значение годовой доходности посчитанной соответствующим методом в формате float
@@ -198,49 +194,63 @@ def create_return(cashflows, method = ['twrr', 'mwrr'], period = 'day'):
         try:
             return op.newton(lambda r: xnpv(r, cashflows), tol=1E-4, x0=guess)
         except:
-            op.minimize(lambda r: xnpv(r, cashflows), x0=guess, tol=1E-5, bounds=op.Bounds(-1.0, 0.0),
-                        method="trust-constr").x[0]
+            return op.minimize.brentq(lambda r: xnpv(r, cashflows), -0.999999999999999, 1e20, maxiter=10**6)
 
     def twrr(cf):
         """
-        Расчет взвешенной по времени доходности, основанной на не равных периодах внесения и изъятия денег в формате DataFrame
+        Расчет взвешенной по времени доходности, при неравномерных на не равномерных периодах внесения и изъятия денег в формате DataFrame
 
-        !!!В последней строке положительный cashflow указывать не нужно!!!
 
-        :param
-        *cf - pandas dataframe с столбцами:
-        index: дата в формате numpy.datetime64
-        total: ежедневные значения стоимостей портфеля и отдельных бумаг
+        :param cashflows: pandas DataFrame с столбцами ['total', 'cashflow'], имя столбца не важно, важна последовательность.
+         index - дата в формает timestamp или datetime64, в которую был произведегн денежный поток и определена стоимость портфеля
+         total - стоимость портфеля на соответствующую дату в формате float
+         cashflow - размер денежного потока на соответствующую дату в формате float
 
-        :return:
+         каждая строка равна дневным значениям.
+
+        :return: [twrr, annual return, revenue]
+        *twrr - взвешенная по времени среднегодовая доходность за весь период. формат: float
+        *annual return - годовая доходность на каждый день
         *total_return - доходность накопительным итогом за весь период
-        *twrr - взвешенная по времени среднегодовая доходность
+        *
         *значения взвешенной по времени доходности на каждый период в входном датафрейме
         """
-        #Формируем периоды между поступлениями / изъятиями денежных средств
-        cf['twrr_interval'] = np.cumsum(cf[cf.columns[1]] != 0) - 1
 
+        start_date = cf.index[0]
+        cf = cf.copy()
 
-        #считаем доходность внутри года по периодам в разах
-        cf['procent change'] = cf.groupby([cf.index.year, 'twrr_interval']).total.pct_change() + 1
-        cf['procent change'].fillna(1, inplace = True)
+        # Формируем периоды расчета изменения стоимости портфеля между пополнениями / изъятиями
+        # Формируем столбец с накопительным количеством строк с не нулевым cashflow и смещаем на один, что бы в интервал
+        # попадала строка с следующим casflow для расчета общей стоимоти до изменения
 
-        #считаем доходность в процентах
-        cf['revenue'] = np.cumprod(cf['procent change'])-1
+        cf.loc[:, 'interval'] = np.cumsum(cf[cf.columns[1]] != 0).shift(1)
 
-        #считаем доходность по годам
-        cf_year_revenue = cf.groupby([cf.index.year, 'twrr_interval'])[['procent change']].prod().reset_index()
+        # Формируем столбец с расчетом изменения общей стоимости портфеля за каждый период по сравнению
+        # с стоимостью в предыдущим периодом убирая из расчета cashflow за текущий период.
+        cf['change'] = ((cf['total'] + cf['cashflow']) / cf['total'].shift(periods=1)).fillna(1)
 
-        #расчитываем среднюю годовую взвешенную по времени доходность за весь период владения, используя в качестве количества лет количество дней в датасете/365
-        t = int((cf.index[-1]-cf.index[0]).days)/365.
-        twrr = ((cf_year_revenue['procent change'].prod()) ** (1. / t) - 1)
+        # Для каждой строки считаем накопительное произведение изменение общей стоимости портфеля в рамках периода
+        cf['prod_interval'] = cf.groupby('interval').change.cumprod().fillna(1)
 
-        return [twrr, cf['revenue']]
+        # Готовим вспомогательный столбец для хранения полного изменения по каждому периоду
+        cf['prod_previous_period'] = cf['prod_interval'][cf['cashflow'] != 0]
+        cf['prod_previous_period'].fillna(1, inplace=True)
+
+        # Расчитываем накопленную доходность умножая изменение за текущий период на общие изменения за прошлые периоды
+        cf['revenue'] = cf.prod_previous_period.cumprod()
+
+        # Рассчитываем годовую доходность, умножая на приведенный к году текущий срок с даты старта портфеля
+        cf['revenue'][cf['cashflow'] == 0] = cf.revenue * cf.prod_interval
+
+        cf['annual return'] = cf.revenue ** (365. / (cf.index - start_date).days) - 1
+
+        return [cf['annual return'][-1], cf['annual return']]
 
     result = {}
     if 'twrr' in method:
         twrr, data  = twrr(cashflows)
-        result['twrr'] = {'return': twrr, 'data':data}
+        result['twrr'] = twrr
+        cashflows['twrr'] = data
 
     if 'mwrr' in method:
         #переводим DataFrame в numpy для скорости выполнения оптимизации
@@ -254,6 +264,12 @@ def create_return(cashflows, method = ['twrr', 'mwrr'], period = 'day'):
             arr_cf[i, 1] += cashflows[cashflows.columns[0]][i]
             arr_res += [xirr(arr_cf[np.abs(arr_cf[:, 1]) > 1e-10])]
 
-        result['mwrr'] = {'return': arr_res[-1], 'data': pd.DataFrame(arr_res, index=arr_res[0], columns=['revenue'])}
+
+        arr_res = [1] + arr_res
+        cashflows['mwrr'] = arr_res
+
+        result['mwrr'] = arr_res[-1]
+
+    result['data'] = cashflows
 
     return result
