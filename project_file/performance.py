@@ -2,8 +2,7 @@
 
 import numpy as np
 import pandas as pd
-# global PERIOD_PER_DAYS
-# PERIOD_PER_DAYS = (np.timedelta64(1, 'D') * 365)
+
 PERIOD_PER_DAYS = 365.0
 
 from scipy import optimize as op
@@ -295,3 +294,5 @@ def create_return(cashflows, method = ['twrr', 'mwrr']):
     result['data'] = cashflows
 
     return result
+
+
