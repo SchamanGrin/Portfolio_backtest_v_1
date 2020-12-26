@@ -102,12 +102,14 @@ def create_return_xirr(cashflows, method = ['twrr', 'mwrr']):
             arr_cf = cf_np[:i+1].copy()
             #прибавляем положительный итоговый денежный поток на дату, равный стоимости портфеля
             arr_cf[i, 1] += cashflows[cashflows.columns[0]][i]
-            dict_t = {k:v for k,v in arr_cf[np.abs(arr_cf[:, 1]) > 1e-10]}
+            a = arr_cf[np.abs(arr_cf[:, 1]) > 1e-10]
+            dict_t = dict(zip(a[:, 0], a[:, 1]))
+            # dict_t = {k: v for k, v in arr_cf[np.abs(arr_cf[:, 1]) > 1e-10]}
             dict_res += [xirr.xirr(dict_t)]
 
 
         #dict_res = [0] + dict_res
-        cashflows.loc[:,'mwrr'] = [0] + dict_res
+        cashflows.loc[:, 'mwrr'] = [0] + dict_res
 
         result['mwrr'] = cashflows['mwrr'][-1]
 
@@ -120,7 +122,7 @@ def read_csv(path):
                      names=['timestamp', 'close', 'cf', 'count','cf and total end', 'total', 'result'], parse_dates=['timestamp'], sep=';',
                      dayfirst=True, decimal=',')
 
-path = Path('testcase') / 'negative_closely_1_cf.csv'
+path = Path('testcase') / 'positive_far_many_cf.csv'
 
 data = read_csv(path)
 
@@ -129,36 +131,21 @@ cf_data = cf_data['cf and total end'].reset_index()
 cf_data['timestamp'] = cf_data['timestamp'].astype('datetime64[ns]')
 arr_cf = cf_data[['timestamp', 'cf and total end']].to_numpy()
 
+data_rename = data[['total', 'cf']].copy()
+data_rename.rename(columns={'cf':'cashflow'}, inplace=True)
+dict_data = dict(zip(data.index,data['cf']))
 
-print('моя функция:')
+res_1 = xirr.xirr(dict_data)
 
-import_module = '''
-import numpy as np
-import pandas as pd
-import xirr
-import performance as perfom
-from pathlib import Path
-'''
-testcode = '''
-def read_csv(path):
-    return pd.read_csv(path, header=0, index_col=0,
-                     names=['timestamp', 'close', 'cf', 'count','cf and total end', 'total', 'result'], parse_dates=['timestamp'], sep=';',
-                     dayfirst=True, decimal=',')
+t0 = time.time()
+res_1 = create_return_xirr(data_rename, ['twrr', 'mwrr'])
+t_1 = time.time() - t0
 
-path = Path('testcase') / 'negative_closely_1_cf.csv'
+t0 = time.time()
+res_2 = perfom.create_return(data_rename, ['twrr', 'mwrr'])
+t_2 = time.time() - t0
 
-data = read_csv(path)
-
-cf_data = pd.DataFrame(data[['cf and total end']])
-cf_data = cf_data['cf and total end'].reset_index()
-cf_data['timestamp'] = cf_data['timestamp'].astype('datetime64[ns]')
-arr_cf = cf_data[['timestamp', 'cf and total end']].to_numpy()
-
-res_xirr = perfom.create_return(data[[total,cf]], [mwrr])
-'''
-print(timeit.timeit(stmt=testcode, setup=import_module))
+print(t_1, t_2)
 
 
-
-#res_xirr_dict = create_return_xirr(data[['total','cf']], ['mwrr'])
-
+print()

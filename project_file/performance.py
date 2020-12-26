@@ -206,7 +206,7 @@ def create_return(cashflows, method = ['twrr', 'mwrr']):
         result = None
 
         try:
-            result = op.newton(lambda r: xnpv(r, cashflows), tol=1E-4, x0=guess)
+            result = op.newton(lambda r: xnpv(r, cashflows), x0=guess)
         except:
             result = op.brentq(lambda r: xnpv(r, cashflows), -0.999999999999999, 1e20, maxiter=10**6)
 
