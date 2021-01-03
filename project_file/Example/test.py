@@ -262,7 +262,7 @@ def read_csv(path):
                      names=['timestamp', 'close', 'cf', 'count','cf and total end', 'total', 'result'], parse_dates=['timestamp'], sep=';',
                      dayfirst=True, decimal=',')
 
-path = Path('testcase') / 'negative_far_many_cf.csv'
+path = Path('testcase') / 'positive_far_many_cf.csv'
 
 data = read_csv(path)
 
@@ -277,8 +277,8 @@ dict_data = dict(zip(data.index,data['cf']))
 
 print('моя функция:')
 t1 = time.time()
-res = perfom.create_return(data[['total','cf']], ['mwrr'])['mwrr']
-print(f'mwrr:{res:.8f}  за {time.time() - t1:.2f} c.')
+res = perfom.create_return(data[['total','cf']], ['mwrr', 'twrr'])
+print(f'за {time.time() - t1:.2f} c.')
 print('----------------------')
 
 print('внешний xirr')

@@ -153,20 +153,20 @@ def twrr(cashflow):
 
     # Формируем столбец с расчетом изменения общей стоимости портфеля за каждый период по сравнению
     # с стоимостью в предыдущим периодом убирая из расчета cashflow за текущий период.
-    cf['change'] = ((cf['total'] + cf['cashflow']) / cf['total'].shift(periods=1)).fillna(1)
+    cf['change'] = ((cf[cf.columns[0]] + cf[cf.columns[1]]) / cf[cf.columns[0]].shift(periods=1)).fillna(1)
 
     # Для каждой строки считаем накопительное произведение изменение общей стоимости портфеля в рамках периода
     cf['prod_interval'] = cf.groupby('interval').change.cumprod().fillna(1)
 
     # Готовим вспомогательный столбец для хранения полного изменения по каждому периоду
-    cf['prod_previous_period'] = cf['prod_interval'][cf['cashflow'] != 0]
+    cf['prod_previous_period'] = cf['prod_interval'][cf[cf.columns[1]] != 0]
     cf['prod_previous_period'].fillna(1, inplace=True)
 
     # Расчитываем накопленную доходность умножая изменение за текущий период на общие изменения за прошлые периоды
     cf['revenue'] = cf.prod_previous_period.cumprod()
 
     # Рассчитываем годовую доходность, умножая на приведенный к году текущий срок с даты старта портфеля
-    cf['revenue'][cf['cashflow'] == 0] = cf.revenue * cf.prod_interval
+    cf['revenue'][cf[cf.columns[1]] == 0] = cf.revenue * cf.prod_interval
 
     cf['annual return'] = cf.revenue ** (365. / (cf.index - start_date).days) - 1
 
@@ -209,9 +209,9 @@ def create_return(cashflows, method = ['twrr', 'mwrr']):
 
     result = {}
     if 'twrr' in method:
-        twrr, data = twrr(cashflows)
-        result['twrr'] = twrr
-        cashflows['twrr'] = data
+        p_twrr, data = twrr(cashflows)
+        result['twrr'] = p_twrr
+        cashflows.loc[:,'twrr'] = data
 
 
     if 'mwrr' in method:
