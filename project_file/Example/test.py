@@ -248,10 +248,7 @@ def create_return_xirr(cashflows, method = ['twrr', 'mwrr']):
             #прибавляем положительный итоговый денежный поток на дату, равный стоимости портфеля
             arr_cf[i, 1] += cashflows[cashflows.columns[0]][i]
             dict_t = {k:v for k,v in arr_cf[np.abs(arr_cf[:, 1]) > 1e-10]}
-            tx = time.time()
             dict_res += [xirr.xirr(dict_t)]
-
-
 
         cashflows.loc[:,'mwrr'] = [0] + dict_res
 
@@ -274,6 +271,9 @@ cf_data = cf_data['cf and total end'].reset_index()
 cf_data['timestamp'] = cf_data['timestamp'].astype('datetime64[ns]')
 arr_cf = cf_data[['timestamp', 'cf and total end']].to_numpy()
 
+data_rename = data[['total', 'cf']].copy()
+data_rename.rename(columns={'cf':'cashflow'}, inplace=True)
+dict_data = dict(zip(data.index,data['cf']))
 
 print('моя функция:')
 t1 = time.time()

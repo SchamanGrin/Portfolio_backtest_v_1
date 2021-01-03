@@ -227,6 +227,7 @@ def create_return(cashflows, method = ['twrr', 'mwrr']):
         except (RuntimeError, OverflowError):  # Failed to converge?
             result = op.brentq(lambda r: xnpv(valuesPerDate, r), -0.999999999999999, 1e20, maxiter=10 ** 6)
 
+
         if not isinstance(result, complex):
             return result
         else:
