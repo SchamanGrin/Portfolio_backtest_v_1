@@ -2,6 +2,7 @@
 
 import numpy as np
 import pandas as pd
+import time
 
 PERIOD_PER_DAYS = 365.0
 
@@ -159,63 +160,77 @@ def twrr(cf):
     return [twrr, cf['revenue']]
 
 
-
 def create_return(cashflows, method = ['twrr', 'mwrr']):
     """
-    Метод расчитывает доходность портфеля с учетом пополнений и изъятий денежных средств портфеля.
-    Расчет производится на основе DataFrame с ежедневными данными о стоимости портфеля и денежного потока
-    на дату. Для расчета используется два метода:
-    - взвешенный по деньгам (money-weighted return)
-    - взвешенный по времени (time-weighted return)
+        Метод расчитывает годовую доходность портфеля с учетом пополнений и изъятий денежных средств портфеля.
+        Расчет производится на основе DataFrame с данными о стоимости портфеля и денежного потока
+        на период. Для расчета используется два метода:
+        - взвешенный по деньгам (money-weighted return)
+        - взвешенный по времени (time-weighted return)
 
 
-    :param cashflows: pandas DataFrame с столбцами ['total', 'cashflow'], имя столбца не важно, важна последовательность.
-     index - дата в формает timestamp или datetime64, в которую был произведегн денежный поток и определена стоимость портфеля
-     total - стоимость портфеля на соответствующую дату в формате float
-     cashflow - размер денежного потока на соответствующую дату в формате float
+        :param cashflows: pandas DataFrame с столбцами ['total', 'cashflow'], имя столбца не важно, важна последовательность.
+         index - дата в формает timestamp или datetime64, в которую был произведегн денежный поток и определена стоимость портфеля
+         total - стоимость портфеля на соответствующую дату в формате float
+         cashflow - размер денежного потока на соответствующую дату в формате float
 
-    :param method: список методов для расчета доходности, определяет метод по которому будет считаться доходность:
-     'twrr' - time-weighted rate of return. Доходность, взвешенная по времени
-     'mwrr' -  money-weighted rate of return. Долходность, взвешенная по деньгам
-     может принимать значения:
-     ['twrr']
-     ['twrr', 'mwrr']
-     ['mwrr']
+        :param method: список методов для расчета доходности, определяет метод по которому будет считаться доходность:
+         'twrr' - time-weighted rate of return. Доходность, взвешенная по времени
+         'mwrr' -  money-weighted rate of return. Долходность, взвешенная по деньгам
+         может принимать значения:
+         ['twrr']
+         ['twrr', 'mwrr']
+         ['mwrr']
 
-    :return: словарь {'twrr';{'return': float, 'data': DataFrame}, 'mwrr':{'return': float, 'data': DataFrame}}
-     return - значение годовой доходности посчитанной соответствующим методом в формате float
-     data - массив значений доходности в каждый момент времени
-    """
-    def xnpv(rate, cashflows):
+        :return: словарь {'twrr';{'return': float, 'data': DataFrame}, 'mwrr':{'return': float, 'data': DataFrame}}
+         return - значение годовой доходности посчитанной соответствующим методом в формате float
+         data - массив значений доходности в каждый момент времени
+        """
 
-        t0 = cashflows[0,0]
-        if rate <= -1:
-            return sum([-abs(cf)/ (-1 - rate) ** (np.timedelta64((t-t0), "D")/(np.timedelta64(1, 'D') * 365)) for t, cf in cashflows])
-        if rate == 0:
-            return sum(cashflows[:, 1])
+    SECONDS_PER_YEAR = 365.0 * 24 * 60 * 60
 
-        return sum([cf/ (1 + rate) ** (np.timedelta64((t-t0), "D")/(np.timedelta64(1, 'D') * 365)) for t, cf in cashflows])
+    for items in method:
+        if items not in ['twrr', 'mwrr']:
+            raise Exception(f'{items} не входит в список используемых методоы расчета')
 
-    def xirr(cashflows, guess=0.1):
 
-        if all(v >= 0 for v in cashflows[:,1]):
+
+    def xnpv(valuesPerDate, rate):
+        '''Calculate the irregular net present value.
+        '''
+
+        if rate == -1.0:
+            return float('inf')
+
+        t0 = min(valuesPerDate.keys())
+
+        if rate <= -1.0:
+            return sum(
+                [-abs(vi) / (-1.0 - rate) ** ((ti - t0).total_seconds() / SECONDS_PER_YEAR) for ti, vi in valuesPerDate.items()])
+
+        return sum([vi / (1.0 + rate) ** ((ti - t0).total_seconds() / SECONDS_PER_YEAR) for ti, vi in valuesPerDate.items()])
+
+    def xirr(valuesPerDate):
+        '''Calculate the irregular internal rate of return.'''
+
+        if not valuesPerDate:
+            return None
+
+        if all(v >= 0 for v in valuesPerDate.values()):
             return float("inf")
-        if all(v <= 0 for v in cashflows[:,1]):
+        if all(v <= 0 for v in valuesPerDate.values()):
             return -float("inf")
 
         result = None
-
         try:
-            result = op.newton(lambda r: xnpv(r, cashflows), tol=1E-4, x0=guess)
-        except:
-            result = op.brentq(lambda r: xnpv(r, cashflows), -0.999999999999999, 1e20, maxiter=10**6)
+            result = op.newton(lambda r: xnpv(valuesPerDate, r), 0)
+        except (RuntimeError, OverflowError):  # Failed to converge?
+            result = op.brentq(lambda r: xnpv(valuesPerDate, r), -0.999999999999999, 1e20, maxiter=10 ** 6)
 
         if not isinstance(result, complex):
             return result
         else:
             return None
-
-
 
     def twrr(cf):
         """
@@ -269,28 +284,27 @@ def create_return(cashflows, method = ['twrr', 'mwrr']):
 
     result = {}
     if 'twrr' in method:
-        twrr, data  = twrr(cashflows)
+        twrr, data = twrr(cashflows)
         result['twrr'] = twrr
         cashflows['twrr'] = data
 
+    t = time.time()
     if 'mwrr' in method:
-        #переводим DataFrame в numpy для скорости выполнения оптимизации
+        # переводим DataFrame в numpy для скорости выполнения оптимизации
         cf_np = cashflows[cashflows.columns[1]].reset_index().to_numpy()
 
-        arr_res = []
+        dict_res = []
         # для каждого значения стоимости портфеля, считаем mwrr
         for i in range(1, len(cf_np)):
-            arr_cf = cf_np[:i+1].copy()
-            #прибавляем положительный итоговый денежный поток на дату, равный стоимости портфеля
+            arr_cf = cf_np[:i + 1].copy()
+            # прибавляем положительный итоговый денежный поток на дату, равный стоимости портфеля
             arr_cf[i, 1] += cashflows[cashflows.columns[0]][i]
-            arr_res += [xirr(arr_cf[np.abs(arr_cf[:, 1]) > 1e-10])]
+            dict_t = {k: v for k, v in arr_cf[np.abs(arr_cf[:, 1]) > 1e-10]}
+            dict_res += [xirr(dict_t)]
 
+        cashflows.loc[:, 'mwrr'] = [0] + dict_res
 
-        arr_res = [1] + arr_res
-        cashflows['mwrr'] = arr_res
-
-        result['mwrr'] = arr_res[-1]
-
+        result['mwrr'] = cashflows['mwrr'][-1]
     result['data'] = cashflows
 
     return result

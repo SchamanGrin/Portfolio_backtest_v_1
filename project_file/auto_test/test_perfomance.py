@@ -11,13 +11,6 @@ def read_csv(path):
     return df
 
 
-"""def prepare_data(data):
-    cf_data = pd.DataFrame(data[['total', 'cf']])
-    cf_data = cf_data['cf'].reset_index()
-    cf_data['timestamp'] = cf_data['timestamp'].astype('datetime64[ns]')
-    arr_cf = cf_data[['timestamp', 'cf']].to_numpy()
-    return arr_cf"""
-
 
 class test_return(unittest.TestCase):
 
