@@ -209,9 +209,8 @@ def create_return(cashflows, method = ['twrr', 'mwrr']):
 
     result = {}
     if 'twrr' in method:
-        p_twrr, data = twrr(cashflows)
-        result['twrr'] = p_twrr
-        cashflows.loc[:,'twrr'] = data
+        result['twrr'], cashflows.loc[:,'twrr'] = twrr(cashflows)
+
 
 
     if 'mwrr' in method:
@@ -228,8 +227,8 @@ def create_return(cashflows, method = ['twrr', 'mwrr']):
             dict_res += [xirr(dict_t)]
 
         cashflows.loc[:, 'mwrr'] = [0] + dict_res
-
         result['mwrr'] = cashflows['mwrr'][-1]
+
     result['data'] = cashflows
 
     return result
