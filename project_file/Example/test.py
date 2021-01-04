@@ -142,8 +142,10 @@ def create_return(cashflows, method = ['twrr', 'mwrr']):
             arr_cf = cf_np[:i + 1].copy()
             # прибавляем положительный итоговый денежный поток на дату, равный стоимости портфеля
             arr_cf[i, 1] += cashflows[cashflows.columns[0]][i]
-            dict_t = {k: v for k, v in arr_cf[np.abs(arr_cf[:, 1]) > 1e-10]}
-            dict_res += [xirr(dict_t)]
+            #dict_t = {k: v for k, v in arr_cf[np.abs(arr_cf[:, 1]) > 1e-10]}
+            arr_not_zerro = arr_cf[np.abs(arr_cf[:, 1]) > 1e-10]
+            dict_r = dict(zip(arr_not_zerro[:,0],arr_not_zerro[:,1]))
+            dict_res += [xirr(dict_r)]
 
         cashflows.loc[:, 'mwrr'] = [0] + dict_res
 
@@ -235,7 +237,6 @@ def create_return_xirr(cashflows, method = ['twrr', 'mwrr']):
         result['twrr'] = twrr
         cashflows['twrr'] = data
 
-    t = time.time()
     if 'mwrr' in method:
         #переводим DataFrame в numpy для скорости выполнения оптимизации
         cf_np = cashflows[cashflows.columns[1]].reset_index().to_numpy()
@@ -275,16 +276,19 @@ data_rename = data[['total', 'cf']].copy()
 data_rename.rename(columns={'cf':'cashflow'}, inplace=True)
 dict_data = dict(zip(data.index,data['cf']))
 
-print('моя функция:')
-t1 = time.time()
-res = perfom.create_return(data[['total','cf']], ['mwrr', 'twrr'])
-print(f'за {time.time() - t1:.2f} c.')
-print('----------------------')
+
 
 print('внешний xirr')
 t2 = time.time()
 res_xirr = create_return_xirr(data[['total','cf']], ['mwrr'])['mwrr']
 print(f'mwrr:{res_xirr:.8f}  за {time.time() - t2:.2f} c.')
+print('----------------------')
+
+
+print('моя функция:')
+t1 = time.time()
+res = perfom.create_return(data[['total','cf']], ['mwrr', 'twrr'])
+print(f'за {time.time() - t1:.2f} c.')
 print('----------------------')
 
 print('переписанный xirr')
